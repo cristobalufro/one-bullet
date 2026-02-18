@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONE BULLET - REFORGED</title>
+    <style>
+        body {
+            background-color: #050505; margin: 0; overflow: hidden;
+            font-family: 'Courier New', Courier, monospace; color: #fff;
+            display: flex; align-items: center; justify-content: center; height: 100vh;
+        }
+        canvas {
+            display: block; width: 100vw; height: 100vh;
+            object-fit: contain; cursor: crosshair; background-color: #0a0a0c;
+        }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
+        .text-neon { font-size: 24px; font-weight: bold; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="game-title" class="text-neon">ONE BULLET</div>
+        <div id="bullet-status" class="text-neon" style="color:#0ff; text-shadow:0 0 10px #0ff;"></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    // --- 1. TRANSLATION SYSTEM (i18n) ---
+    const LANG = {
+        en: {
+            title: "ONE BULLET",
+            status_ready: "STATUS: READY",
+            status_danger: "STATUS: DANGER (BOUNCING)",
+            status_recover: "STATUS: STOPPED (RECOVER)",
+            death_self: "YOU SHOT YOURSELF",
+            death_melee: "FATAL CONTACT",
+            death_shot: "YOU GOT SHOT",
+            restart: " - CLICK TO RESTART"
+        },
+        es: {
+            title: "ONE BULLET",
+            status_ready: "ESTADO: LISTA",
+            status_danger: "ESTADO: PELIGRO (REBOTANDO)",
+            status_recover: "ESTADO: DETENIDA (RECUPERAR)",
+            death_self: "TE MATASTE CON TU PROPIA BALA",
+            death_melee: "CONTACTO FATAL",
+            death_shot: "RECIBISTE UN DISPARO",
+            restart: " - CLICK PARA REINICIAR"
+        }
+    };
+
+    let currentLang = 'en'; // Change this to 'es' when you want Spanish
+    function t(key) { return LANG[currentLang][key]; }
+
+    // Setup initial UI Text
+    document.getElementById('game-title').innerText = t('title');
+    const statusText = document.getElementById('bullet-status');
+    statusText.innerText = t('status_ready');
+
+    // --- CORE GAME SETUP ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const GAME_WIDTH = 1280; const GAME_HEIGHT = 720;
+    canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT;
+    const WORLD_WIDTH = 2500; const WORLD_HEIGHT = 1500;
+
+    const COLORS = {
+        bg: '#0a0a0c', wall: '#222', wallNeon: '#444',
+        player: '#00ffff', enemyMelee: '#ff0055', enemyShooter: '#ff8800', 
+        telegraph: '#ffffff', enemyBullet: '#ff5500',
+        bulletActive: '#ffff00', bulletIdle: '#555555',
+        blood: '#ff0055', spark: '#ffff00', grid: '#111'
+    };
+
+    const keys = { w: false, a: false, s: false, d: false };
+    const mouse = { screenX: GAME_WIDTH/2, screenY: GAME_HEIGHT/2, worldX: 0, worldY: 0 };
+    let camX = 0, camY = 0;
+
+    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    window.addEventListener('mousemove', e => { 
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+        mouse.screenX = (e.clientX - rect.left) * scaleX; mouse.screenY = (e.clientY - rect.top) * scaleY;
+    });
+    window.addEventListener('mousedown', e => { if(e.button === 0) tryShoot(); });
+
+    let lastTime = 0, shakeTime = 0, shakeIntensity = 0, hitStopFrames = 0, gameOver = false;
+    let particles = [], enemies = [], enemyBullets = [];
+    
+    let walls = [
+        {x: 0, y: 0, w: WORLD_WIDTH, h: 20}, {x: 0, y: WORLD_HEIGHT-20, w: WORLD_WIDTH, h: 20},
+        {x: 0, y: 0, w: 20, h: WORLD_HEIGHT}, {x: WORLD_WIDTH-20, y: 0, w: 20, h: WORLD_HEIGHT},
+        {x: 400, y: 200, w: 100, h: 500}, {x: 800, y: 0, w: 50, h: 600}, // <--- The Wall from 800 to 850
+        {x: 1200, y: 400, w: 600, h: 50}, {x: WORLD_WIDTH - 600, y: WORLD_HEIGHT - 400, w: 200, h: 200}
+    ];
+
+    // PLAYER
+    const player = {
+        x: 200, y: 200, vx: 0, vy: 0, radius: 15, maxSpeed: 600, hasBullet: true,
+        update(dt) {
+            let dx = 0, dy = 0;
+            if (keys.w) dy -= 1; if (keys.s) dy += 1;
+            if (keys.a) dx -= 1; if (keys.d) dx += 1;
+            if (dx !== 0 && dy !== 0) { let length = Math.sqrt(dx*dx + dy*dy); dx /= length; dy /= length; }
+
+            this.vx += (dx * this.maxSpeed - this.vx) * 25 * dt;
+            this.vy += (dy * this.maxSpeed - this.vy) * 25 * dt;
+
+            this.x += this.vx * dt;
+            for(let w of walls) { if(rectCircleColliding(this, w)) { this.x -= this.vx * dt; this.vx = 0; break; } }
+            this.y += this.vy * dt;
+            for(let w of walls) { if(rectCircleColliding(this, w)) { this.y -= this.vy * dt; this.vy = 0; break; } }
+            
+            this.x = Math.max(this.radius, Math.min(WORLD_WIDTH - this.radius, this.x));
+            this.y = Math.max(this.radius, Math.min(WORLD_HEIGHT - this.radius, this.y));
+        },
+        draw() {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.atan2(mouse.worldY - this.y, mouse.worldX - this.x));
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+            ctx.fillStyle = COLORS.bg; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = COLORS.player; ctx.stroke();
+            ctx.fillStyle = COLORS.player; ctx.fillRect(this.radius - 2, -4, 18, 8);
+            if(this.hasBullet) { ctx.fillStyle = COLORS.bulletActive; ctx.beginPath(); ctx.arc(this.radius + 12, 0, 4, 0, Math.PI*2); ctx.fill(); }
+            ctx.restore();
+        }
+    };
+
+    // PLAYER BULLET
+    const bullet = {
+        x: 0, y: 0, vx: 0, vy: 0, radius: 6, speed: 1800, active: false, moving: false,
+        bounces: 0, maxBounces: 3, trail: [], graceTimer: 0,
+
+        fire(sx, sy, tx, ty) {
+            this.x = sx; this.y = sy; let angle = Math.atan2(ty - sy, tx - sx);
+            this.vx = Math.cos(angle) * this.speed; this.vy = Math.sin(angle) * this.speed;
+            this.active = true; this.moving = true; this.bounces = 0;
+            this.trail = []; this.graceTimer = 0.15; player.hasBullet = false;
+            updateUI(); addScreenShake(12, 0.1);
+        },
+        stop() { this.vx = 0; this.vy = 0; this.moving = false; updateUI(); },
+        update(dt) {
+            if (!this.active) return;
+            if (this.graceTimer > 0) this.graceTimer -= dt;
+
+            this.trail.push({x: this.x, y: this.y, alpha: 1});
+            if (this.trail.length > 15) this.trail.shift();
+            for(let t of this.trail) t.alpha -= dt * 6;
+
+            if (!this.moving) {
+                if (Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius + 15) {
+                    this.active = false; player.hasBullet = true; updateUI();
+                    for(let i=0; i<5; i++) spawnParticle(this.x, this.y, COLORS.bulletActive, 250);
+                } return;
+            }
+
+            let steps = 4; let stepDt = dt / steps;
+            for(let s = 0; s < steps; s++) {
+                let nextX = this.x + this.vx * stepDt; let nextY = this.y + this.vy * stepDt; let bounced = false;
+
+                for(let w of walls) { if(rectCircleColliding({x: nextX, y: this.y, radius: this.radius}, w)) { this.vx *= -1; bounced = true; nextX = this.x; spawnParticle(this.x, this.y, COLORS.spark, 400, 6); break; } }
+                this.x = nextX;
+                for(let w of walls) { if(rectCircleColliding({x: this.x, y: nextY, radius: this.radius}, w)) { this.vy *= -1; bounced = true; nextY = this.y; spawnParticle(this.x, this.y, COLORS.spark, 400, 6); break; } }
+                this.y = nextY;
+
+                if (bounced) { this.bounces++; addScreenShake(8, 0.08); if (this.bounces >= this.maxBounces) { this.stop(); break; } }
+
+                for(let i = enemies.length - 1; i >= 0; i--) {
+                    let e = enemies[i];
+                    if (Math.hypot(e.x - this.x, e.y - this.y) < e.radius + this.radius) {
+                        spawnParticle(e.x, e.y, COLORS.blood, 600, 25);
+                        enemies.splice(i, 1); addScreenShake(25, 0.15); hitStopFrames = 4;
+                        this.stop(); this.x = e.x; this.y = e.y; break;
+                    }
+                }
+
+                if (this.graceTimer <= 0 && this.moving && Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius) {
+                    triggerGameOver(t('death_self'));
+                }
+            }
+        },
+        draw() {
+            if (!this.active) return;
+            ctx.beginPath();
+            for(let i=0; i<this.trail.length; i++) {
+                if(i===0) ctx.moveTo(this.trail[i].x, this.trail[i].y); else ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            ctx.strokeStyle = this.moving ? COLORS.bulletActive : COLORS.bulletIdle;
+            ctx.lineWidth = this.radius * 2; ctx.lineCap = "round"; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1.0;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+            ctx.fillStyle = this.moving ? COLORS.bulletActive : COLORS.bulletIdle; ctx.fill();
+        }
+    };
+
+    // ENEMY BULLET
+    class EnemyBullet {
+        constructor(x, y, angle) {
+            this.x = x; this.y = y; this.radius = 4; this.speed = 600;
+            this.vx = Math.cos(angle) * this.speed; this.vy = Math.sin(angle) * this.speed;
+            this.active = true;
+        }
+        update(dt) {
+            this.x += this.vx * dt; this.y += this.vy * dt;
+            for(let w of walls) { if(rectCircleColliding(this, w)) { this.active = false; spawnParticle(this.x, this.y, COLORS.enemyBullet, 150, 3); return; } }
+            if (Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius) {
+                triggerGameOver(t('death_shot')); this.active = false;
+            }
+        }
+        draw() {
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+            ctx.fillStyle = COLORS.enemyBullet; ctx.fill();
+            ctx.shadowBlur = 10; ctx.shadowColor = COLORS.enemyBullet; ctx.fill(); ctx.shadowBlur = 0;
+        }
+    }
+
+    // ENEMY AI
+    class Enemy {
+        constructor(x, y, type = 'melee') {
+            this.x = x; this.y = y; this.radius = 16; this.type = type;
+            this.speed = type === 'melee' ? 250 + Math.random() * 50 : 150 + Math.random() * 30;
+            this.state = 'chase';
+            this.timer = 0;
+            this.targetCorner = null;
+        }
+        update(dt) {
+            let distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+
+            // 1. Line of Sight Check (once per frame)
+            let hasLOS = true;
+            for(let w of walls) { if(lineRectIntersect(this.x, this.y, player.x, player.y, w)) { hasLOS = false; break; } }
+
+            // 2. Shooter Logic (Behavior State Machine)
+            if (this.type === 'shooter') {
+                if (this.state === 'chase') {
+                    if (hasLOS && distToPlayer < 600 && distToPlayer > 150 && Math.random() < 0.05) {
+                        this.state = 'aiming'; this.timer = 0.5;
+                    }
+                } else if (this.state === 'aiming') {
+                    this.timer -= dt;
+                    if (this.timer <= 0) {
+                        if (hasLOS) {
+                            let angle = Math.atan2(player.y - this.y, player.x - this.x);
+                            enemyBullets.push(new EnemyBullet(this.x, this.y, angle));
+                            this.state = 'cooldown'; this.timer = 1.0;
+                            addScreenShake(5, 0.05);
+                        } else {
+                            this.state = 'chase';
+                        }
+                    }
+                    // Continue movement while aiming
+                } else if (this.state === 'cooldown') {
+                    this.timer -= dt; if (this.timer <= 0) this.state = 'chase';
+                }
+            }
+
+            // 3. Pathfinding Logic (Corner Navigation)
+            if (hasLOS) {
+                this.targetCorner = null;
+            } else {
+                // Throttle pathfinding: only find corner if we don't have one or reached the current one
+                // Or if the current corner is no longer visible (checked every frame)
+                let targetStillVisible = true;
+                if (this.targetCorner) {
+                    for(let w of walls) { if(lineRectIntersect(this.x, this.y, this.targetCorner.x, this.targetCorner.y, w)) { targetStillVisible = false; break; } }
+                }
+
+                if (!this.targetCorner || distSq(this.x, this.y, this.targetCorner.x, this.targetCorner.y) < 100 || !targetStillVisible) {
+                    let bestCorner = null;
+                    let minDist = Infinity;
+                    const padding = 25; // Increased padding for better clearance
+
+                    for(let w of walls) {
+                        let corners = [
+                            {x: w.x - padding, y: w.y - padding},
+                            {x: w.x + w.w + padding, y: w.y - padding},
+                            {x: w.x - padding, y: w.y + w.h + padding},
+                            {x: w.x + w.w + padding, y: w.y + w.h + padding}
+                        ];
+
+                        for(let c of corners) {
+                            // Quick bounds check: is corner visible to enemy?
+                            let cornerVisible = true;
+                            for(let w2 of walls) { if(lineRectIntersect(this.x, this.y, c.x, c.y, w2)) { cornerVisible = false; break; } }
+                            
+                            if (cornerVisible) {
+                                // Heuristic: distance to corner + distance from corner to player
+                                let d = distSq(this.x, this.y, c.x, c.y) + distSq(c.x, c.y, player.x, player.y);
+                                if (d < minDist) { minDist = d; bestCorner = c; }
+                            }
+                        }
+                    }
+                    this.targetCorner = bestCorner;
+                }
+            }
+
+            // Movement Logic
+            let targetX = this.targetCorner ? this.targetCorner.x : player.x;
+            let targetY = this.targetCorner ? this.targetCorner.y : player.y;
+            
+            let moveX = 0;
+            let moveY = 0;
+
+            // Only move towards target if not a stationary shooter
+            if (!(this.type === 'shooter' && (this.state === 'aiming' || this.state === 'cooldown'))) {
+                let angle = Math.atan2(targetY - this.y, targetX - this.x);
+                moveX = Math.cos(angle) * this.speed * dt;
+                moveY = Math.sin(angle) * this.speed * dt;
+            }
+
+            // Enemy-Enemy Separation (Small push-back)
+            for(let other of enemies) {
+                if(other === this) continue;
+                let dSq = distSq(this.x, this.y, other.x, other.y);
+                let minDist = (this.radius + other.radius);
+                if(dSq < minDist * minDist) {
+                    let d = Math.sqrt(dSq) || 1;
+                    let pushForce = (minDist - d) * 10 * dt; // Small separation force
+                    let angle = Math.atan2(this.y - other.y, this.x - other.x);
+                    moveX += Math.cos(angle) * pushForce;
+                    moveY += Math.sin(angle) * pushForce;
+                }
+            }
+
+            let nextX = this.x + moveX;
+            let nextY = this.y + moveY;
+
+            let colX = false, colY = false;
+            for(let w of walls) {
+                if(rectCircleColliding({x: nextX, y: this.y, radius: this.radius}, w)) colX = true;
+                if(rectCircleColliding({x: this.x, y: nextY, radius: this.radius}, w)) colY = true;
+            }
+
+            // Simple sliding and collision resolution
+            if (colX) {
+                let yDir = Math.sign(targetY - this.y);
+                if (yDir === 0) yDir = 1;
+                let slideY = this.y + (yDir * this.speed * dt);
+                let slideColY = false;
+                for(let w of walls) { if(rectCircleColliding({x: this.x, y: slideY, radius: this.radius}, w)) slideColY = true; }
+                if (!slideColY) { this.y = slideY; }
+                colX = true; // Still blocked on X
+            } else {
+                this.x = nextX;
+            }
+
+            if (colY) {
+                let xDir = Math.sign(targetX - this.x);
+                if (xDir === 0) xDir = 1;
+                let slideX = this.x + (xDir * this.speed * dt);
+                let slideColX = false;
+                for(let w of walls) { if(rectCircleColliding({x: slideX, y: this.y, radius: this.radius}, w)) slideColX = true; }
+                if (!slideColX) { this.x = slideX; }
+                colY = true; // Still blocked on Y
+            } else {
+                this.y = nextY;
+            }
+
+            if(distToPlayer < player.radius + this.radius) triggerGameOver(t('death_melee'));
+        }
+        draw() {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.atan2(player.y - this.y, player.x - this.x));
+            ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2);
+            ctx.fillStyle = COLORS.bg; ctx.fill(); ctx.lineWidth = 3; 
+            
+            let mainColor = this.state === 'aiming' ? COLORS.telegraph : (this.type === 'shooter' ? COLORS.enemyShooter : COLORS.enemyMelee);
+            ctx.strokeStyle = mainColor; ctx.stroke();
+            
+            ctx.fillStyle = mainColor; ctx.fillRect(this.radius - 6, -8, 5, 5); ctx.fillRect(this.radius - 6, 3, 5, 5);
+            
+            if (this.type === 'shooter') {
+                ctx.fillRect(this.radius, -2, 12, 4);
+                if (this.state === 'aiming') {
+                    ctx.beginPath(); ctx.moveTo(this.radius + 12, 0); ctx.lineTo(this.radius + 600, 0);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 1; ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+    }
+
+    function spawnEnemies() {
+        enemies = [
+            new Enemy(900, 200, 'melee'),
+            new Enemy(2000, 300, 'melee'),
+            new Enemy(1500, 1000, 'shooter'),
+            new Enemy(2200, 1200, 'shooter'),
+            new Enemy(200, 1200, 'melee')
+        ];
+        enemyBullets = [];
+    }
+    spawnEnemies();
+
+    // UTILS
+    function spawnParticle(x, y, color, speed, count) {
+        for(let i=0; i<count; i++) {
+            let angle = Math.random() * Math.PI * 2; let vel = Math.random() * speed;
+            particles.push({ x: x, y: y, vx: Math.cos(angle) * vel, vy: Math.sin(angle) * vel, life: 1.0, color: color, size: Math.random() * 5 + 3 });
+        }
+    }
+    function updateParticles(dt) {
+        for(let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.85; p.vy *= 0.85; p.life -= dt * 2;
+            if(p.life <= 0) particles.splice(i, 1);
+        }
+    }
+    function drawParticles() {
+        for(let p of particles) { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size); } 
+        ctx.globalAlpha = 1.0;
+    }
+
+    function tryShoot() { if(gameOver) return resetGame(); if(player.hasBullet) bullet.fire(player.x, player.y, mouse.worldX, mouse.worldY); }
+
+    function rectCircleColliding(circle, rect) {
+        let distX = Math.abs(circle.x - rect.x - rect.w/2); let distY = Math.abs(circle.y - rect.y - rect.h/2);
+        if (distX > (rect.w/2 + circle.radius) || distY > (rect.h/2 + circle.radius)) return false;
+        if (distX <= (rect.w/2) || distY <= (rect.h/2)) return true;
+        let dx = distX - rect.w/2; let dy = distY - rect.h/2; return (dx*dx + dy*dy <= (circle.radius*circle.radius));
+    }
+
+    function distSq(x1, y1, x2, y2) {
+        return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    }
+
+    function lineRectIntersect(x1, y1, x2, y2, rect) {
+        let left = rect.x;
+        let right = rect.x + rect.w;
+        let top = rect.y;
+        let bottom = rect.y + rect.h;
+
+        let tmin = 0, tmax = 1;
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+
+        if (dx !== 0) {
+            let t1 = (left - x1) / dx;
+            let t2 = (right - x1) / dx;
+            tmin = Math.max(tmin, Math.min(t1, t2));
+            tmax = Math.min(tmax, Math.max(t1, t2));
+        } else if (x1 < left || x1 > right) return false;
+
+        if (dy !== 0) {
+            let t1 = (top - y1) / dy;
+            let t2 = (bottom - y1) / dy;
+            tmin = Math.max(tmin, Math.min(t1, t2));
+            tmax = Math.min(tmax, Math.max(t1, t2));
+        } else if (y1 < top || y1 > bottom) return false;
+
+        return tmax >= tmin;
+    }
+
+    function addScreenShake(intensity, duration) { shakeIntensity = intensity; shakeTime = duration; }
+
+    function updateUI() {
+        if(gameOver) return;
+        if(player.hasBullet) { statusText.innerText = t('status_ready'); statusText.style.color = COLORS.bulletActive; statusText.style.textShadow = `0 0 10px ${COLORS.bulletActive}`; }
+        else if (bullet.moving) { statusText.innerText = t('status_danger'); statusText.style.color = COLORS.enemyMelee; statusText.style.textShadow = `0 0 10px ${COLORS.enemyMelee}`; }
+        else { statusText.innerText = t('status_recover'); statusText.style.color = COLORS.bulletIdle; statusText.style.textShadow = "none"; }
+    }
+
+    function triggerGameOver(reason) {
+        gameOver = true; statusText.innerText = reason + t('restart');
+        statusText.style.color = COLORS.enemyMelee; statusText.style.textShadow = `0 0 20px ${COLORS.enemyMelee}`; addScreenShake(20, 0.5);
+    }
+
+    function resetGame() {
+        player.x = 200; player.y = 200; player.hasBullet = true; bullet.active = false;
+        particles = []; spawnEnemies(); gameOver = false; updateUI();
+    }
+
+    // MAIN LOOP
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000; lastTime = timestamp; if (dt > 0.1) dt = 0.1; 
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+        camX = Math.max(0, Math.min(player.x - GAME_WIDTH / 2, WORLD_WIDTH - GAME_WIDTH));
+        camY = Math.max(0, Math.min(player.y - GAME_HEIGHT / 2, WORLD_HEIGHT - GAME_HEIGHT));
+        mouse.worldX = mouse.screenX + camX; mouse.worldY = mouse.screenY + camY;
+
+        if (hitStopFrames > 0) { hitStopFrames--; } 
+        else {
+            if (!gameOver) { 
+                player.update(dt); bullet.update(dt); 
+                enemies.forEach(e => e.update(dt)); 
+                for(let i = enemyBullets.length - 1; i >= 0; i--) {
+                    enemyBullets[i].update(dt); if(!enemyBullets[i].active) enemyBullets.splice(i, 1);
+                }
+            }
+            updateParticles(dt); if (shakeTime > 0) shakeTime -= dt;
+        }
+
+        ctx.save();
+        if (shakeTime > 0) { ctx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity); }
+        ctx.translate(-camX, -camY);
+
+        ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1; ctx.beginPath();
+        for(let x=0; x<=WORLD_WIDTH; x+=100) { ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_HEIGHT); }
+        for(let y=0; y<=WORLD_HEIGHT; y+=100) { ctx.moveTo(0, y); ctx.lineTo(WORLD_WIDTH, y); } ctx.stroke();
+
+        ctx.fillStyle = COLORS.bg; ctx.strokeStyle = COLORS.wallNeon; ctx.lineWidth = 2;
+        for(let w of walls) { ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeRect(w.x, w.y, w.w, w.h); }
+
+        drawParticles();
+        if (!gameOver) player.draw();
+        enemyBullets.forEach(eb => eb.draw());
+        enemies.forEach(e => e.draw());
+        bullet.draw();
+
+        ctx.restore(); 
+        if (gameOver) { ctx.fillStyle = 'rgba(255, 0, 50, 0.15)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+</script>
+</body>
+</html>

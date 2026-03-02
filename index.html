@@ -626,6 +626,22 @@
             ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2); ctx.fill();
         }
         ctx.globalAlpha = 1.0;
+
+        // Flecha indicadora al Nexo
+        let nDx = nexus.x - player.x;
+        let nDy = nexus.y - player.y;
+        let nDist = Math.sqrt(nDx*nDx + nDy*nDy);
+        if (nDist > 150) { 
+            let angle = Math.atan2(nDy, nDx);
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(angle);
+            ctx.fillStyle = 'rgba(155, 89, 182, 0.8)'; 
+            ctx.beginPath();
+            ctx.moveTo(60, 0); ctx.lineTo(45, -8); ctx.lineTo(45, 8); ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
         
         // Puntero de apuntado
         let dx = mouseX - (canvas.width / 2); let dy = mouseY - (canvas.height / 2);

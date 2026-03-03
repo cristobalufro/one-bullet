@@ -47,7 +47,7 @@
         .hud {
             display: flex;
             justify-content: space-between;
-            font-size: 2.5vmin;
+            font-size: 3vmin;
             font-weight: bold;
             text-shadow: 2px 2px 0 #000;
         }
@@ -56,26 +56,139 @@
             flex-direction: column;
             align-items: center;
         }
-        #dashDisplay {
-            color: #00d2d3;
-            margin-top: 5px;
-            transition: color 0.3s;
-        }
-        #instruccion {
-            text-align: center;
-            font-size: 2vmin;
-            color: #aaa;
-            margin-top: 5px;
-        }
+        
+        /* Central Pulse State (Alertas) */
         #estadoPulso {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
             text-align: center;
-            font-size: 4vmin;
+            font-size: 5vmin;
             font-weight: bold;
             color: #f1c40f;
             opacity: 0.9;
-            margin-top: 5px;
             text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000;
         }
+
+        /* --- NUEVO BOTTOM HUD (Estilo MOBA) --- */
+        #bottom-hud {
+            position: absolute;
+            bottom: 3%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: flex-end;
+            gap: 2vmin;
+            background: rgba(10, 10, 10, 0.85);
+            padding: 1.5vmin 3vmin;
+            border-radius: 10px;
+            border: 2px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .hud-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5vmin;
+        }
+        .hud-label {
+            font-size: 1.5vmin;
+            color: #aaa;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        /* Barra de Stamina */
+        .hud-stamina-container {
+            width: 25vmin;
+            height: 3.5vmin;
+            background: #222;
+            border-radius: 5px;
+            border: 2px solid #111;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.5);
+            margin-bottom: 0.5vmin;
+        }
+        .hud-stamina-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #20bf6b, #2ed573);
+            transition: width 0.1s linear, background 0.3s;
+        }
+        .hud-stamina-fill.empty {
+            background: linear-gradient(90deg, #eb3b5a, #fc5c65);
+        }
+        .hud-stamina-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8vmin;
+            font-weight: 900;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* Habilidades (Cuadros) */
+        .hud-ability {
+            width: 7vmin;
+            height: 7vmin;
+            background: #1e1e1e;
+            border: 2px solid #555;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        .hud-ability-icon {
+            font-size: 2.2vmin;
+            font-weight: bold;
+            color: #777;
+            z-index: 2;
+        }
+        .hud-ability-cd-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 3;
+            transition: height 0.1s linear;
+        }
+        .hud-ability-cd-text {
+            position: absolute;
+            z-index: 4;
+            font-size: 3vmin;
+            color: #ff4757;
+            font-weight: 900;
+            text-shadow: 2px 2px 0 #000;
+            display: none;
+        }
+        .hud-ability.ready {
+            border-color: #00d2d3;
+            box-shadow: 0 0 15px rgba(0, 210, 211, 0.4), inset 0 0 10px rgba(0, 210, 211, 0.2);
+        }
+        .hud-ability.ready .hud-ability-icon {
+            color: #00d2d3;
+            text-shadow: 0 0 5px rgba(0,210,211,0.5);
+        }
+        .hud-ability.ready-ult {
+            border-color: #9b59b6;
+            box-shadow: 0 0 15px rgba(155, 89, 182, 0.4), inset 0 0 10px rgba(155, 89, 182, 0.2);
+        }
+        .hud-ability.ready-ult .hud-ability-icon {
+            color: #9b59b6;
+            text-shadow: 0 0 5px rgba(155,89,182,0.5);
+        }
+
         #game-over {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -85,6 +198,7 @@
             justify-content: center;
             align-items: center;
             pointer-events: auto;
+            z-index: 20;
         }
         #game-over h1 { font-size: 8vmin; margin: 0 0 10px 0; color: #ff4757; }
         #game-over p { font-size: 3vmin; margin: 0 0 30px 0; text-align: center; }
@@ -92,7 +206,7 @@
         /* Combo UI */
         #combo-container {
             position: absolute;
-            top: 50%;
+            top: 40%;
             left: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
@@ -103,7 +217,7 @@
             font-weight: 900;
             color: #f1c40f;
             text-shadow: 0 0 20px rgba(241, 196, 15, 0.8), 4px 4px 0 #000;
-            animation: combo-pop 0.4s ease-out forwards;
+            animation: combo-pop 0.5s ease-out forwards;
             font-style: italic;
         }
         @keyframes combo-pop {
@@ -136,14 +250,36 @@
         <div id="ui-layer">
             <div class="hud">
                 <div id="scoreDisplay">Puntos: 0</div>
-                <div class="hud-center">
-                    <div id="timeDisplay">Tiempo: 0.0s</div>
-                    <div id="dashDisplay">Dash: LISTO</div>
+                <div id="timeDisplay">Tiempo: 0.0s</div>
+            </div>
+            <div id="estadoPulso"></div>
+        </div>
+
+        <div id="bottom-hud">
+            <div class="hud-group">
+                <div class="hud-label">STAMINA</div>
+                <div class="hud-stamina-container">
+                    <div id="stamina-fill" class="hud-stamina-fill"></div>
+                    <div id="stamina-text" class="hud-stamina-text">100 / 100</div>
                 </div>
             </div>
-            <div>
-                <div id="instruccion">Espacio = Cargar | Shift = Dash Jugador</div>
-                <div id="estadoPulso"></div>
+
+            <div class="hud-group">
+                <div class="hud-label">DASH</div>
+                <div id="ability-dash" class="hud-ability ready">
+                    <div class="hud-ability-icon">SHIFT</div>
+                    <div id="dash-cd-overlay" class="hud-ability-cd-overlay"></div>
+                    <div id="dash-cd-text" class="hud-ability-cd-text"></div>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <div class="hud-label">ULTIMATE</div>
+                <div id="ability-ult" class="hud-ability ready-ult">
+                    <div class="hud-ability-icon">R</div>
+                    <div id="ult-cd-overlay" class="hud-ability-cd-overlay"></div>
+                    <div id="ult-cd-text" class="hud-ability-cd-text"></div>
+                </div>
             </div>
         </div>
 
@@ -160,11 +296,22 @@
         const UI = {
             score: document.getElementById('scoreDisplay'),
             time: document.getElementById('timeDisplay'),
-            dash: document.getElementById('dashDisplay'),
             estado: document.getElementById('estadoPulso'),
             gameOver: document.getElementById('game-over'),
             finalStats: document.getElementById('finalStats'),
-            comboContainer: document.getElementById('combo-container')
+            comboContainer: document.getElementById('combo-container'),
+            
+            // Elementos del Bottom HUD
+            staminaFill: document.getElementById('stamina-fill'),
+            staminaText: document.getElementById('stamina-text'),
+            
+            dashAbility: document.getElementById('ability-dash'),
+            dashOverlay: document.getElementById('dash-cd-overlay'),
+            dashText: document.getElementById('dash-cd-text'),
+            
+            ultAbility: document.getElementById('ability-ult'),
+            ultOverlay: document.getElementById('ult-cd-overlay'),
+            ultText: document.getElementById('ult-cd-text')
         };
 
         const WIDTH = 1920;
@@ -197,12 +344,16 @@
         let particles = [];
         let hitstopTimer = 0;
         
-        const DASH_DURATION = 0.6; 
+        const DASH_DURATION = 2.0; 
         const MAX_CHARGE_TIME = 2.0; 
         
         let chargeTimer = 0;
         let pulseDashTimer = 0;
         let globalState = 'chase'; 
+        
+        // Ultimate Cooldown
+        let ultCooldown = 0;
+        const ULT_MAX_COOLDOWN = 20.0;
 
         let player;
         let enemies = [];
@@ -262,19 +413,19 @@
         const keys = { 
             KeyW: false, KeyA: false, KeyS: false, KeyD: false, 
             ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, 
-            Space: false, ShiftLeft: false, ShiftRight: false 
+            KeyR: false, ShiftLeft: false, ShiftRight: false 
         };
 
         window.addEventListener('keydown', (e) => { 
             if(keys.hasOwnProperty(e.code)) {
                 keys[e.code] = true;
-                if(e.code === 'Space' || e.code.includes('Shift')) e.preventDefault();
+                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
             }
         });
         window.addEventListener('keyup', (e) => { 
             if(keys.hasOwnProperty(e.code)) {
                 keys[e.code] = false;
-                if(e.code === 'Space' || e.code.includes('Shift')) e.preventDefault();
+                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
             }
         });
         window.addEventListener('blur', () => {
@@ -294,18 +445,20 @@
                 this.radius = 20; 
                 this.color = '#1e90ff';
                 
-                // --- Físicas más "Snappy" ---
                 this.vx = 0; 
                 this.vy = 0;
-                this.acceleration = 7500; // Mayor aceleración = reacciona más rápido
-                this.friction = 10;       // Mayor fricción = frena más rápido, sin resbalar tanto
+                this.acceleration = 7500; 
+                this.friction = 10;       
                 
                 this.isDashing = false;
                 this.dashSpeed = 3000; 
                 this.dashTimeMax = 0.15; 
                 this.dashTimer = 0;
-                this.cooldownMax = 8.0; 
+                this.cooldownMax = 1; 
                 this.cooldownTimer = 0;
+
+                this.staminaMax = 100;
+                this.stamina = 100;
 
                 this.trail = [];
                 this.trailTimer = 0;
@@ -325,6 +478,8 @@
                     dx /= length; dy /= length;
                 }
 
+                const isMoving = (dx !== 0 || dy !== 0);
+
                 if (this.isDashing) {
                     this.dashTimer -= dt;
                     if (this.dashTimer <= 0) {
@@ -333,15 +488,24 @@
                         this.vy *= 0.5;
                     }
                 } else {
-                    if ((keys.ShiftLeft || keys.ShiftRight) && this.cooldownTimer <= 0 && (dx !== 0 || dy !== 0)) {
+                    // La Stamina SÓLO se gasta al moverse. No se regenera pasivamente (o muy lento).
+                    if (isMoving) {
+                        this.stamina = Math.max(0, this.stamina - 40 * dt);
+                    }
+
+                    if ((keys.ShiftLeft || keys.ShiftRight) && this.cooldownTimer <= 0 && isMoving) {
                         this.isDashing = true;
                         this.dashTimer = this.dashTimeMax;
                         this.cooldownTimer = this.cooldownMax;
                         this.vx = dx * this.dashSpeed;
                         this.vy = dy * this.dashSpeed;
                     } else {
-                        this.vx += dx * this.acceleration * dt;
-                        this.vy += dy * this.acceleration * dt;
+                        let currentAccel = this.acceleration;
+                        if (this.stamina <= 0) {
+                            currentAccel *= 0.5; // Penalización por cansancio
+                        }
+                        this.vx += dx * currentAccel * dt;
+                        this.vy += dy * currentAccel * dt;
                     }
                 }
 
@@ -370,10 +534,9 @@
             draw() {
                 const img = SPRITES.player;
                 const aspect = img.naturalWidth / img.naturalHeight || 2;
-                const drawH = this.radius * 6; // Mayor tamaño (aprox 2x lo anterior)
+                const drawH = this.radius * 6; 
                 const drawW = drawH * aspect;
 
-                // --- Estela del Jugador (Trail) ---
                 for (let i = 0; i < this.trail.length; i++) {
                     const t = this.trail[i];
                     ctx.save();
@@ -390,7 +553,7 @@
                 
                 if (this.isDashing) {
                     ctx.shadowBlur = 30;
-                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowColor = '#ff4757';
                 }
 
                 ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
@@ -429,6 +592,12 @@
                 this.wobbleAmount = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.5); 
                 this.sprite = SPRITES.enemies[Math.floor(Math.random() * SPRITES.enemies.length)];
                 this.facingLeft = Math.random() > 0.5;
+
+                this.microDashTimer = 1.5 + Math.random() * 1.5; 
+                this.isMicroDashing = false;
+                this.microDashTime = 0;
+                this.microDashDx = 0;
+                this.microDashDy = 0;
             }
 
             prepareDash(px, py) {
@@ -451,16 +620,39 @@
                     const dy = py - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (dist > 0) {
-                        let targetAngle = Math.atan2(dy, dx);
-                        const distFactor = Math.min(1, dist / 400); 
-                        targetAngle += Math.sin(this.lifeTime * this.wobbleSpeed) * this.wobbleAmount * distFactor;
-                        
-                        const vx = Math.cos(targetAngle) * this.speed;
+                    if (this.isMicroDashing) {
+                        this.microDashTime += dt;
+                        const dashSpeedMultiplier = 2.5; 
+                        const vx = this.microDashDx * this.speed * dashSpeedMultiplier;
                         this.x += vx * dt;
-                        this.y += Math.sin(targetAngle) * this.speed * dt;
+                        this.y += this.microDashDy * this.speed * dashSpeedMultiplier * dt;
                         
                         if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
+
+                        if (this.microDashTime >= 0.3) {
+                            this.isMicroDashing = false;
+                            this.microDashTimer = 1.5 + Math.random() * 1.5;
+                        }
+                    } else {
+                        if (dist > 0) {
+                            let targetAngle = Math.atan2(dy, dx);
+                            const distFactor = Math.min(1, dist / 400); 
+                            targetAngle += Math.sin(this.lifeTime * this.wobbleSpeed) * this.wobbleAmount * distFactor;
+                            
+                            const vx = Math.cos(targetAngle) * this.speed;
+                            this.x += vx * dt;
+                            this.y += Math.sin(targetAngle) * this.speed * dt;
+                            
+                            if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
+                        }
+
+                        this.microDashTimer -= dt;
+                        if (this.microDashTimer <= 0 && dist > 0) {
+                            this.isMicroDashing = true;
+                            this.microDashTime = 0;
+                            this.microDashDx = dx / dist;
+                            this.microDashDy = dy / dist;
+                        }
                     }
                 } else if (globalState === 'dash') {
                     const dashSpeedMultiplier = 3.5;
@@ -504,7 +696,11 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
                 
-                // --- Animación de Waddle ---
+                if (this.isMicroDashing) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff4757';
+                }
+
                 const waddleFreq = 12;
                 const waddleAmp = 10;
                 const tiltAmp = 0.15;
@@ -518,7 +714,7 @@
                 
                 const img = this.sprite;
                 const aspect = img.naturalWidth / img.naturalHeight || 2;
-                const drawH = this.radius * 6; // Mayor tamaño (aprox 2x lo anterior)
+                const drawH = this.radius * 6; 
                 const drawW = drawH * aspect;
                 
                 ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
@@ -539,6 +735,7 @@
             particles = [];
             shakeAmount = 0;
             hitstopTimer = 0;
+            ultCooldown = 0;
             UI.comboContainer.innerHTML = '';
             tiempoSobrevivido = 0;
             puntaje = 0;
@@ -576,21 +773,27 @@
                 return;
             }
             tiempoSobrevivido += dt;
+            if (ultCooldown > 0) ultCooldown -= dt;
             
-            if (globalState === 'chase' && keys.Space) {
+            // --- Ultimate Global (Ahora en la tecla R) ---
+            if (globalState === 'chase' && keys.KeyR && ultCooldown <= 0) {
                 globalState = 'charging';
                 chargeTimer = 0;
-                UI.estado.innerText = "¡APUNTANDO!";
+                ultCooldown = ULT_MAX_COOLDOWN;
+                UI.estado.innerText = "APUNTANDO";
                 UI.estado.style.color = "#f1c40f";
             } 
             else if (globalState === 'charging') {
                 chargeTimer += dt;
                 for (let e of enemies) e.prepareDash(player.x, player.y);
 
-                if (!keys.Space || chargeTimer >= MAX_CHARGE_TIME) {
+                let remaining = Math.max(0, MAX_CHARGE_TIME - chargeTimer);
+                UI.estado.innerText = `¡APUNTANDO! (${remaining.toFixed(1)}s)`;
+
+                if (chargeTimer >= MAX_CHARGE_TIME) {
                     globalState = 'dash';
                     pulseDashTimer = 0;
-                    UI.estado.innerText = "¡EMBESTIDA!";
+                    UI.estado.innerText = "EMBESTIDA";
                     UI.estado.style.color = "#ff4757";
                 }
             } 
@@ -623,45 +826,70 @@
                 if (particles[i].life <= 0) particles.splice(i, 1);
             }
 
-            for (let e of enemies) {
-                e.update(dt, player.x, player.y);
-                if (checkCollision(player, e)) {
-                    finalizarJuego();
-                    return;
+            let enemiesToRemove = new Set();
+            let killCount = 0;
+            let enemiesKilledByPlayerDash = new Set();
+            let gameOverTriggered = false;
+
+            for (let i = 0; i < enemies.length; i++) {
+                enemies[i].update(dt, player.x, player.y);
+                if (checkCollision(player, enemies[i])) {
+                    if (player.isDashing) {
+                        enemiesKilledByPlayerDash.add(i);
+                    } else {
+                        gameOverTriggered = true;
+                    }
                 }
             }
 
-            let enemiesToRemove = new Set();
-            let killCount = 0;
+            if (enemiesKilledByPlayerDash.size > 0) {
+                player.isDashing = false; 
+                player.vx *= 0.2; 
+                player.vy *= 0.2; 
+                triggerShake(35);
+                triggerHitstop(0.05); 
+                
+                enemiesKilledByPlayerDash.forEach(index => {
+                    let e = enemies[index];
+                    spawnParticles(e.x, e.y, e.color, 20);
+                    spawnParticles(e.x, e.y, "#ffffff", 10);
+                    puntaje += e.puntos * 3; 
+                    enemiesToRemove.add(index);
+                });
+                
+                killCount += enemiesKilledByPlayerDash.size;
+                colisiones += enemiesKilledByPlayerDash.size;
+                gameOverTriggered = false; 
+            }
+
+            if (gameOverTriggered) {
+                finalizarJuego();
+                return;
+            }
+
             for (let i = 0; i < enemies.length; i++) {
                 for (let j = i + 1; j < enemies.length; j++) {
-                    
-                    // Comprobar si hay colisión física
+                    if (enemiesToRemove.has(i) || enemiesToRemove.has(j)) continue;
+
                     const dx = enemies[i].x - enemies[j].x;
                     const dy = enemies[i].y - enemies[j].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const minDist = enemies[i].radius + enemies[j].radius;
 
                     if (dist < minDist) {
-                        // Si están en embestida, se destruyen
                         if (globalState === 'dash') {
-                            if (!enemiesToRemove.has(i) && !enemiesToRemove.has(j)) {
-                                enemiesToRemove.add(i);
-                                enemiesToRemove.add(j);
-                                killCount += 2;
-                                colisiones++;
-                                puntaje += (enemies[i].puntos + enemies[j].puntos) * 3;
-                                
-                                triggerShake(25);
-                                triggerHitstop(0.05);
-                                spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, enemies[i].color, 15);
-                                spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, "#ffffff", 10);
-                            }
+                            enemiesToRemove.add(i);
+                            enemiesToRemove.add(j);
+                            killCount += 2;
+                            colisiones++;
+                            puntaje += (enemies[i].puntos + enemies[j].puntos) * 3;
+                            
+                            triggerShake(25);
+                            triggerHitstop(0.05);
+                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, enemies[i].color, 15);
+                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, "#ffffff", 10);
                         } else {
-                            // Si NO están en embestida, simplemente se empujan (Soft Collision)
-                            // Esto crea el efecto "enjambre" o bola sin que se superpongan del todo
                             const overlap = minDist - dist;
-                            // Prevenir división por cero si aparecen exactamente en el mismo pixel
                             const safeDist = dist === 0 ? 0.01 : dist; 
                             const pushX = (dx / safeDist) * overlap * 0.5;
                             const pushY = (dy / safeDist) * overlap * 0.5;
@@ -675,23 +903,52 @@
                 }
             }
 
+            // --- REGENERACIÓN DE STAMINA POR KILLS ---
             if (killCount > 0) {
                 showCombo(killCount);
+                // Otorga 25 puntos de stamina por cada baja (Dash o Ultimate)
+                player.stamina = Math.min(player.staminaMax, player.stamina + 50 * killCount);
             }
 
             if (enemiesToRemove.size > 0) {
                 enemies = enemies.filter((_, index) => !enemiesToRemove.has(index));
             }
 
+            // --- ACTUALIZAR INTERFAZ (UI) ---
             UI.score.innerText = `Puntos: ${puntaje}`;
             UI.time.innerText = `Tiempo: ${tiempoSobrevivido.toFixed(1)}s`;
             
-            if (player.cooldownTimer <= 0) {
-                UI.dash.innerText = "Dash: LISTO";
-                UI.dash.style.color = "#00d2d3";
+            // Stamina HUD
+            const stamPct = (player.stamina / player.staminaMax) * 100;
+            UI.staminaFill.style.width = `${stamPct}%`;
+            if (player.stamina <= 0) UI.staminaFill.classList.add('empty');
+            else UI.staminaFill.classList.remove('empty');
+            UI.staminaText.innerText = `${Math.floor(player.stamina)} / ${player.staminaMax}`;
+
+            // Dash HUD
+            if (player.cooldownTimer > 0) {
+                UI.dashAbility.classList.remove('ready');
+                let cdPct = (player.cooldownTimer / player.cooldownMax) * 100;
+                UI.dashOverlay.style.height = `${cdPct}%`;
+                UI.dashText.style.display = 'block';
+                UI.dashText.innerText = player.cooldownTimer.toFixed(1);
             } else {
-                UI.dash.innerText = `Dash: ${player.cooldownTimer.toFixed(1)}s`;
-                UI.dash.style.color = "#ff6b6b";
+                UI.dashAbility.classList.add('ready');
+                UI.dashOverlay.style.height = '0%';
+                UI.dashText.style.display = 'none';
+            }
+
+            // Ultimate HUD
+            if (ultCooldown > 0) {
+                UI.ultAbility.classList.remove('ready-ult');
+                let cdPct = (ultCooldown / ULT_MAX_COOLDOWN) * 100;
+                UI.ultOverlay.style.height = `${cdPct}%`;
+                UI.ultText.style.display = 'block';
+                UI.ultText.innerText = ultCooldown.toFixed(1);
+            } else {
+                UI.ultAbility.classList.add('ready-ult');
+                UI.ultOverlay.style.height = '0%';
+                UI.ultText.style.display = 'none';
             }
         }
 

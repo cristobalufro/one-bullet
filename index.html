@@ -319,11 +319,13 @@
 
         // --- Carga de Sprites ---
         const SPRITES = {
+            map: new Image(),
             player: new Image(),
             enemies: [
                 new Image(), new Image(), new Image(), new Image(), new Image()
             ]
         };
+        SPRITES.map.src = 'map.png';
         SPRITES.player.src = 'caballero.png';
         SPRITES.enemies[0].src = 'enemigo.png';
         SPRITES.enemies[1].src = 'Lizard01.png';
@@ -462,10 +464,12 @@
 
                 this.trail = [];
                 this.trailTimer = 0;
+                this.iFrameTimer = 0;
             }
 
             update(dt) {
                 if (this.cooldownTimer > 0) this.cooldownTimer -= dt;
+                if (this.iFrameTimer > 0) this.iFrameTimer -= dt;
 
                 let dx = 0; let dy = 0;
                 if (keys.KeyW || keys.ArrowUp) dy -= 1;
@@ -499,6 +503,7 @@
                         this.cooldownTimer = this.cooldownMax;
                         this.vx = dx * this.dashSpeed;
                         this.vy = dy * this.dashSpeed;
+                        this.iFrameTimer = this.dashTimeMax + 0.1; // I-frames durante el dash + 0.1s extra
                     } else {
                         let currentAccel = this.acceleration;
                         if (this.stamina <= 0) {
@@ -554,6 +559,8 @@
                 if (this.isDashing) {
                     ctx.shadowBlur = 30;
                     ctx.shadowColor = '#ff4757';
+                } else if (this.iFrameTimer > 0) {
+                    ctx.globalAlpha = 0.6; // Visual feedback para I-frames post-dash
                 }
 
                 ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
@@ -834,8 +841,11 @@
             for (let i = 0; i < enemies.length; i++) {
                 enemies[i].update(dt, player.x, player.y);
                 if (checkCollision(player, enemies[i])) {
-                    if (player.isDashing) {
-                        enemiesKilledByPlayerDash.add(i);
+                    if (player.isDashing || player.iFrameTimer > 0) {
+                        if (player.isDashing) {
+                            enemiesKilledByPlayerDash.add(i);
+                        }
+                        // Si tiene I-frames pero no está en dash ofensivo, simplemente no muere
                     } else {
                         gameOverTriggered = true;
                     }
@@ -844,6 +854,7 @@
 
             if (enemiesKilledByPlayerDash.size > 0) {
                 player.isDashing = false; 
+                player.iFrameTimer = 0.3; // I-frames extra tras impacto para seguridad
                 player.vx *= 0.2; 
                 player.vy *= 0.2; 
                 triggerShake(35);
@@ -963,7 +974,10 @@
                 ctx.translate(sx, sy);
             }
 
-            ctx.strokeStyle = globalState === 'charging' ? 'rgba(241, 196, 15, 0.4)' : (globalState === 'dash' ? 'rgba(255, 71, 87, 0.4)' : '#222');
+            // Fondo (Mapa)
+            ctx.drawImage(SPRITES.map, 0, 0, WIDTH, HEIGHT);
+
+            ctx.strokeStyle = globalState === 'charging' ? 'rgba(241, 196, 15, 0.4)' : (globalState === 'dash' ? 'rgba(255, 71, 87, 0.4)' : 'rgba(34, 34, 34, 0.3)');
             ctx.lineWidth = globalState !== 'chase' ? 4 : 2;
             
             ctx.beginPath();

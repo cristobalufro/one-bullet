@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dodge Arena</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            color: white;
+            user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 177.78vh;
+            max-height: 56.25vw;
+            aspect-ratio: 16 / 9;
+            background-color: #111;
+            border: 4px solid #333;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3%;
+            box-sizing: border-box;
+        }
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            font-size: 3vmin;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+        }
+        .hud-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Central Pulse State (Alertas) */
+        #estadoPulso {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 5vmin;
+            font-weight: bold;
+            color: #f1c40f;
+            opacity: 0.9;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* --- NUEVO BOTTOM HUD (Estilo MOBA) --- */
+        #bottom-hud {
+            position: absolute;
+            bottom: 3%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: flex-end;
+            gap: 2vmin;
+            background: rgba(10, 10, 10, 0.85);
+            padding: 1.5vmin 3vmin;
+            border-radius: 10px;
+            border: 2px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .hud-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5vmin;
+        }
+        .hud-label {
+            font-size: 1.5vmin;
+            color: #aaa;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        /* Barra de Stamina */
+        .hud-stamina-container {
+            width: 25vmin;
+            height: 3.5vmin;
+            background: #222;
+            border-radius: 5px;
+            border: 2px solid #111;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.5);
+            margin-bottom: 0.5vmin;
+        }
+        .hud-stamina-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #20bf6b, #2ed573);
+            transition: width 0.1s linear, background 0.3s;
+        }
+        .hud-stamina-fill.empty {
+            background: linear-gradient(90deg, #eb3b5a, #fc5c65);
+        }
+        .hud-stamina-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.8vmin;
+            font-weight: 900;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* Habilidades (Cuadros) */
+        .hud-ability {
+            width: 7vmin;
+            height: 7vmin;
+            background: #1e1e1e;
+            border: 2px solid #555;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+        .hud-ability-icon {
+            font-size: 2.2vmin;
+            font-weight: bold;
+            color: #777;
+            z-index: 2;
+        }
+        .hud-ability-cd-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 3;
+            transition: height 0.1s linear;
+        }
+        .hud-ability-cd-text {
+            position: absolute;
+            z-index: 4;
+            font-size: 3vmin;
+            color: #ff4757;
+            font-weight: 900;
+            text-shadow: 2px 2px 0 #000;
+            display: none;
+        }
+        .hud-ability.ready {
+            border-color: #00d2d3;
+            box-shadow: 0 0 15px rgba(0, 210, 211, 0.4), inset 0 0 10px rgba(0, 210, 211, 0.2);
+        }
+        .hud-ability.ready .hud-ability-icon {
+            color: #00d2d3;
+            text-shadow: 0 0 5px rgba(0,210,211,0.5);
+        }
+        .hud-ability.ready-ult {
+            border-color: #9b59b6;
+            box-shadow: 0 0 15px rgba(155, 89, 182, 0.4), inset 0 0 10px rgba(155, 89, 182, 0.2);
+        }
+        .hud-ability.ready-ult .hud-ability-icon {
+            color: #9b59b6;
+            text-shadow: 0 0 5px rgba(155,89,182,0.5);
+        }
+
+        #game-over {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 20;
+        }
+        #game-over h1 { font-size: 8vmin; margin: 0 0 10px 0; color: #ff4757; }
+        #game-over p { font-size: 3vmin; margin: 0 0 30px 0; text-align: center; }
+        
+        /* Combo UI */
+        #combo-container {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .combo-text {
+            font-size: 10vmin;
+            font-weight: 900;
+            color: #f1c40f;
+            text-shadow: 0 0 20px rgba(241, 196, 15, 0.8), 4px 4px 0 #000;
+            animation: combo-pop 0.5s ease-out forwards;
+            font-style: italic;
+        }
+        @keyframes combo-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            20% { transform: scale(1.4); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; transform: translateY(-50px); }
+        }
+
+        button {
+            padding: 2vmin 4vmin;
+            font-size: 3vmin;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            background-color: #2ed573;
+            color: #111;
+            border: none;
+            border-radius: 5px;
+            transition: transform 0.1s, background 0.2s;
+        }
+        button:hover { background-color: #7bed9f; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1920" height="1080"></canvas>
+        <div id="combo-container"></div>
+        
+        <div id="ui-layer">
+            <div class="hud">
+                <div id="scoreDisplay">Puntos: 0</div>
+                <div id="timeDisplay">Tiempo: 0.0s</div>
+            </div>
+            <div id="estadoPulso"></div>
+        </div>
+
+        <div id="bottom-hud">
+            <div class="hud-group">
+                <div class="hud-label">STAMINA</div>
+                <div class="hud-stamina-container">
+                    <div id="stamina-fill" class="hud-stamina-fill"></div>
+                    <div id="stamina-text" class="hud-stamina-text">100 / 100</div>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <div class="hud-label">DASH</div>
+                <div id="ability-dash" class="hud-ability ready">
+                    <div class="hud-ability-icon">SHIFT</div>
+                    <div id="dash-cd-overlay" class="hud-ability-cd-overlay"></div>
+                    <div id="dash-cd-text" class="hud-ability-cd-text"></div>
+                </div>
+            </div>
+
+            <div class="hud-group">
+                <div class="hud-label">ULTIMATE</div>
+                <div id="ability-ult" class="hud-ability ready-ult">
+                    <div class="hud-ability-icon">R</div>
+                    <div id="ult-cd-overlay" class="hud-ability-cd-overlay"></div>
+                    <div id="ult-cd-text" class="hud-ability-cd-text"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over">
+            <h1>GAME OVER</h1>
+            <p id="finalStats">Sobreviviste 0s<br>Colisiones provocadas: 0<br>Puntos: 0</p>
+            <button onclick="iniciarJuego()">Volver a Jugar</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const UI = {
+            score: document.getElementById('scoreDisplay'),
+            time: document.getElementById('timeDisplay'),
+            estado: document.getElementById('estadoPulso'),
+            gameOver: document.getElementById('game-over'),
+            finalStats: document.getElementById('finalStats'),
+            comboContainer: document.getElementById('combo-container'),
+            
+            // Elementos del Bottom HUD
+            staminaFill: document.getElementById('stamina-fill'),
+            staminaText: document.getElementById('stamina-text'),
+            
+            dashAbility: document.getElementById('ability-dash'),
+            dashOverlay: document.getElementById('dash-cd-overlay'),
+            dashText: document.getElementById('dash-cd-text'),
+            
+            ultAbility: document.getElementById('ability-ult'),
+            ultOverlay: document.getElementById('ult-cd-overlay'),
+            ultText: document.getElementById('ult-cd-text')
+        };
+
+        const WIDTH = 1920;
+        const HEIGHT = 1080;
+
+        // --- Carga de Sprites ---
+        const SPRITES = {
+            map: new Image(),
+            player: new Image(),
+            enemies: [
+                new Image(), new Image(), new Image(), new Image(), new Image()
+            ]
+        };
+        SPRITES.map.src = 'map.png';
+        SPRITES.player.src = 'caballero.png';
+        SPRITES.enemies[0].src = 'enemigo.png';
+        SPRITES.enemies[1].src = 'Lizard01.png';
+        SPRITES.enemies[2].src = 'Lizard02.png';
+        SPRITES.enemies[3].src = 'Lizard03.png';
+        SPRITES.enemies[4].src = 'Skeleton.png';
+
+        let lastTime = 0;
+        let isGameOver = false;
+        let animationFrameId;
+        
+        let tiempoSobrevivido = 0;
+        let puntaje = 0;
+        let colisiones = 0;
+        let dificultadMult = 1;
+
+        let shakeAmount = 0;
+        let particles = [];
+        let hitstopTimer = 0;
+        
+        const DASH_DURATION = 2.0; 
+        const MAX_CHARGE_TIME = 2.0; 
+        
+        let chargeTimer = 0;
+        let pulseDashTimer = 0;
+        let globalState = 'chase'; 
+        
+        // Ultimate Cooldown
+        let ultCooldown = 0;
+        const ULT_MAX_COOLDOWN = 20.0;
+
+        let player;
+        let enemies = [];
+        let spawnTimer = 0;
+        let spawnInterval = 2;
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 800;
+                this.vy = (Math.random() - 0.5) * 800;
+                this.radius = Math.random() * 8 + 4;
+                this.life = 1.0;
+                this.color = color;
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.vx *= 0.96;
+                this.vy *= 0.96;
+                this.life -= dt * 1.5;
+            }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function triggerShake(amt) {
+            shakeAmount = Math.max(shakeAmount, amt);
+        }
+
+        function triggerHitstop(duration) {
+            hitstopTimer = duration;
+        }
+
+        function spawnParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function showCombo(n) {
+            if (n < 2) return;
+            const div = document.createElement('div');
+            div.className = 'combo-text';
+            div.innerText = `x${n} COMBO!`;
+            UI.comboContainer.innerHTML = '';
+            UI.comboContainer.appendChild(div);
+        }
+
+        const keys = { 
+            KeyW: false, KeyA: false, KeyS: false, KeyD: false, 
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, 
+            KeyR: false, ShiftLeft: false, ShiftRight: false 
+        };
+
+        window.addEventListener('keydown', (e) => { 
+            if(keys.hasOwnProperty(e.code)) {
+                keys[e.code] = true;
+                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', (e) => { 
+            if(keys.hasOwnProperty(e.code)) {
+                keys[e.code] = false;
+                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
+            }
+        });
+        window.addEventListener('blur', () => {
+            for (let key in keys) keys[key] = false;
+        });
+
+        const DOORS = [
+            { x: 0, y: HEIGHT / 2, width: 20, height: 200 },        
+            { x: WIDTH, y: HEIGHT / 2, width: 20, height: 200 },    
+            { x: WIDTH / 2, y: HEIGHT, width: 300, height: 20 }     
+        ];
+
+        class Player {
+            constructor() {
+                this.x = WIDTH / 2;
+                this.y = HEIGHT / 2;
+                this.radius = 20; 
+                this.color = '#1e90ff';
+                
+                this.vx = 0; 
+                this.vy = 0;
+                this.acceleration = 7500; 
+                this.friction = 10;       
+                
+                this.isDashing = false;
+                this.dashSpeed = 3000; 
+                this.dashTimeMax = 0.15; 
+                this.dashTimer = 0;
+                this.cooldownMax = 1; 
+                this.cooldownTimer = 0;
+
+                this.staminaMax = 100;
+                this.stamina = 100;
+
+                this.trail = [];
+                this.trailTimer = 0;
+                this.iFrameTimer = 0;
+            }
+
+            update(dt) {
+                if (this.cooldownTimer > 0) this.cooldownTimer -= dt;
+                if (this.iFrameTimer > 0) this.iFrameTimer -= dt;
+
+                let dx = 0; let dy = 0;
+                if (keys.KeyW || keys.ArrowUp) dy -= 1;
+                if (keys.KeyS || keys.ArrowDown) dy += 1;
+                if (keys.KeyA || keys.ArrowLeft) dx -= 1;
+                if (keys.KeyD || keys.ArrowRight) dx += 1;
+
+                if (dx !== 0 && dy !== 0) {
+                    const length = Math.sqrt(dx * dx + dy * dy);
+                    dx /= length; dy /= length;
+                }
+
+                const isMoving = (dx !== 0 || dy !== 0);
+
+                if (this.isDashing) {
+                    this.dashTimer -= dt;
+                    if (this.dashTimer <= 0) {
+                        this.isDashing = false;
+                        this.vx *= 0.5;
+                        this.vy *= 0.5;
+                    }
+                } else {
+                    // La Stamina SÓLO se gasta al moverse. No se regenera pasivamente (o muy lento).
+                    if (isMoving) {
+                        this.stamina = Math.max(0, this.stamina - 40 * dt);
+                    }
+
+                    if ((keys.ShiftLeft || keys.ShiftRight) && this.cooldownTimer <= 0 && isMoving) {
+                        this.isDashing = true;
+                        this.dashTimer = this.dashTimeMax;
+                        this.cooldownTimer = this.cooldownMax;
+                        this.vx = dx * this.dashSpeed;
+                        this.vy = dy * this.dashSpeed;
+                        this.iFrameTimer = this.dashTimeMax + 0.1; // I-frames durante el dash + 0.1s extra
+                    } else {
+                        let currentAccel = this.acceleration;
+                        if (this.stamina <= 0) {
+                            currentAccel *= 0.5; // Penalización por cansancio
+                        }
+                        this.vx += dx * currentAccel * dt;
+                        this.vy += dy * currentAccel * dt;
+                    }
+                }
+
+                const currentFriction = this.isDashing ? 2 : this.friction;
+                this.vx -= this.vx * currentFriction * dt;
+                this.vy -= this.vy * currentFriction * dt;
+
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                if (this.x < this.radius) { this.x = this.radius; this.vx = 0; }
+                if (this.x > WIDTH - this.radius) { this.x = WIDTH - this.radius; this.vx = 0; }
+                if (this.y < this.radius) { this.y = this.radius; this.vy = 0; }
+                if (this.y > HEIGHT - this.radius) { this.y = HEIGHT - this.radius; this.vy = 0; }
+
+                this.trailTimer += dt;
+                if (this.trailTimer > 0.02) { 
+                    this.trail.push({x: this.x, y: this.y, alpha: 0.6});
+                    if (this.trail.length > 10) this.trail.shift(); 
+                    this.trailTimer = 0;
+                }
+                for (let t of this.trail) t.alpha -= 3 * dt;
+                this.trail = this.trail.filter(t => t.alpha > 0);
+            }
+
+            draw() {
+                const img = SPRITES.player;
+                const aspect = img.naturalWidth / img.naturalHeight || 2;
+                const drawH = this.radius * 6; 
+                const drawW = drawH * aspect;
+
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    ctx.save();
+                    ctx.translate(t.x, t.y);
+                    if (this.vx > 10) ctx.scale(-1, 1);
+                    ctx.globalAlpha = Math.max(0, t.alpha);
+                    ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+                    ctx.restore();
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.vx > 10) ctx.scale(-1, 1);
+                
+                if (this.isDashing) {
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#ff4757';
+                } else if (this.iFrameTimer > 0) {
+                    ctx.globalAlpha = 0.6; // Visual feedback para I-frames post-dash
+                }
+
+                ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+                ctx.restore();
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                const door = DOORS[Math.floor(Math.random() * DOORS.length)];
+                if (door.width > door.height) { 
+                    this.x = door.x - door.width/2 + Math.random() * door.width;
+                    this.y = door.y;
+                } else { 
+                    this.x = door.x;
+                    this.y = door.y - door.height/2 + Math.random() * door.height;
+                }
+
+                this.isFast = Math.random() < 0.3;
+                if (this.isFast) {
+                    this.radius = 12;
+                    this.speed = 450 * dificultadMult;
+                    this.color = '#ffa502';
+                    this.puntos = 20;
+                } else {
+                    this.radius = 24;
+                    this.speed = 300 * dificultadMult;
+                    this.color = '#ff4757';
+                    this.puntos = 10;
+                }
+
+                this.dashDx = 0;
+                this.dashDy = 0;
+                this.lifeTime = Math.random() * 100; 
+                this.wobbleSpeed = 1 + Math.random() * 2; 
+                this.wobbleAmount = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.5); 
+                this.sprite = SPRITES.enemies[Math.floor(Math.random() * SPRITES.enemies.length)];
+                this.facingLeft = Math.random() > 0.5;
+
+                this.microDashTimer = 1.5 + Math.random() * 1.5; 
+                this.isMicroDashing = false;
+                this.microDashTime = 0;
+                this.microDashDx = 0;
+                this.microDashDy = 0;
+            }
+
+            prepareDash(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    this.dashDx = dx / dist;
+                    this.dashDy = dy / dist;
+                } else {
+                    this.dashDx = 1; this.dashDy = 0;
+                }
+            }
+
+            update(dt, px, py) {
+                this.lifeTime += dt;
+
+                if (globalState === 'chase') {
+                    const dx = px - this.x;
+                    const dy = py - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (this.isMicroDashing) {
+                        this.microDashTime += dt;
+                        const dashSpeedMultiplier = 2.5; 
+                        const vx = this.microDashDx * this.speed * dashSpeedMultiplier;
+                        this.x += vx * dt;
+                        this.y += this.microDashDy * this.speed * dashSpeedMultiplier * dt;
+                        
+                        if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
+
+                        if (this.microDashTime >= 0.3) {
+                            this.isMicroDashing = false;
+                            this.microDashTimer = 1.5 + Math.random() * 1.5;
+                        }
+                    } else {
+                        if (dist > 0) {
+                            let targetAngle = Math.atan2(dy, dx);
+                            const distFactor = Math.min(1, dist / 400); 
+                            targetAngle += Math.sin(this.lifeTime * this.wobbleSpeed) * this.wobbleAmount * distFactor;
+                            
+                            const vx = Math.cos(targetAngle) * this.speed;
+                            this.x += vx * dt;
+                            this.y += Math.sin(targetAngle) * this.speed * dt;
+                            
+                            if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
+                        }
+
+                        this.microDashTimer -= dt;
+                        if (this.microDashTimer <= 0 && dist > 0) {
+                            this.isMicroDashing = true;
+                            this.microDashTime = 0;
+                            this.microDashDx = dx / dist;
+                            this.microDashDy = dy / dist;
+                        }
+                    }
+                } else if (globalState === 'dash') {
+                    const dashSpeedMultiplier = 3.5;
+                    const vx = this.dashDx * this.speed * dashSpeedMultiplier;
+                    this.x += vx * dt;
+                    this.y += this.dashDy * this.speed * dashSpeedMultiplier * dt;
+
+                    if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
+
+                    if (this.x <= this.radius || this.x >= WIDTH - this.radius) {
+                        this.dashDx *= -1;
+                        this.x = Math.max(this.radius, Math.min(WIDTH - this.radius, this.x));
+                    }
+                    if (this.y <= this.radius || this.y >= HEIGHT - this.radius) {
+                        this.dashDy *= -1;
+                        this.y = Math.max(this.radius, Math.min(HEIGHT - this.radius, this.y));
+                    }
+                }
+            }
+
+            draw() {
+                if (globalState === 'charging') {
+                    const arrowLength = this.radius * 12;
+                    const endX = this.x + this.dashDx * arrowLength;
+                    const endY = this.y + this.dashDy * arrowLength;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(endX, endY);
+                    
+                    const angle = Math.atan2(this.dashDy, this.dashDx);
+                    ctx.lineTo(endX - 15 * Math.cos(angle - Math.PI/8), endY - 15 * Math.sin(angle - Math.PI/8));
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX - 15 * Math.cos(angle + Math.PI/8), endY - 15 * Math.sin(angle + Math.PI/8));
+                    
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                if (this.isMicroDashing) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff4757';
+                }
+
+                const waddleFreq = 12;
+                const waddleAmp = 10;
+                const tiltAmp = 0.15;
+                const bounce = Math.abs(Math.sin(this.lifeTime * waddleFreq)) * waddleAmp;
+                const tilt = Math.sin(this.lifeTime * waddleFreq) * tiltAmp;
+                
+                ctx.translate(0, -bounce);
+                ctx.rotate(tilt);
+                
+                if (!this.facingLeft) ctx.scale(-1, 1);
+                
+                const img = this.sprite;
+                const aspect = img.naturalWidth / img.naturalHeight || 2;
+                const drawH = this.radius * 6; 
+                const drawW = drawH * aspect;
+                
+                ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+                ctx.restore();
+            }
+        }
+
+        function checkCollision(obj1, obj2) {
+            const dx = obj1.x - obj2.x;
+            const dy = obj1.y - obj2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return dist < (obj1.radius + obj2.radius);
+        }
+
+        function iniciarJuego() {
+            player = new Player();
+            enemies = [];
+            particles = [];
+            shakeAmount = 0;
+            hitstopTimer = 0;
+            ultCooldown = 0;
+            UI.comboContainer.innerHTML = '';
+            tiempoSobrevivido = 0;
+            puntaje = 0;
+            colisiones = 0;
+            dificultadMult = 1;
+            
+            spawnTimer = 0;
+            spawnInterval = 2;
+            
+            globalState = 'chase';
+            UI.estado.innerText = "";
+            
+            for (let key in keys) keys[key] = false;
+
+            isGameOver = false;
+            UI.gameOver.style.display = 'none';
+            lastTime = performance.now();
+            
+            cancelAnimationFrame(animationFrameId);
+            gameLoop(lastTime);
+        }
+
+        function gameLoop(currentTime) {
+            if (isGameOver) return;
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            update(dt);
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            if (hitstopTimer > 0) {
+                hitstopTimer -= dt;
+                return;
+            }
+            tiempoSobrevivido += dt;
+            if (ultCooldown > 0) ultCooldown -= dt;
+            
+            // --- Ultimate Global (Ahora en la tecla R) ---
+            if (globalState === 'chase' && keys.KeyR && ultCooldown <= 0) {
+                globalState = 'charging';
+                chargeTimer = 0;
+                ultCooldown = ULT_MAX_COOLDOWN;
+                UI.estado.innerText = "APUNTANDO";
+                UI.estado.style.color = "#f1c40f";
+            } 
+            else if (globalState === 'charging') {
+                chargeTimer += dt;
+                for (let e of enemies) e.prepareDash(player.x, player.y);
+
+                let remaining = Math.max(0, MAX_CHARGE_TIME - chargeTimer);
+                UI.estado.innerText = `¡APUNTANDO! (${remaining.toFixed(1)}s)`;
+
+                if (chargeTimer >= MAX_CHARGE_TIME) {
+                    globalState = 'dash';
+                    pulseDashTimer = 0;
+                    UI.estado.innerText = "EMBESTIDA";
+                    UI.estado.style.color = "#ff4757";
+                }
+            } 
+            else if (globalState === 'dash') {
+                pulseDashTimer += dt;
+                if (pulseDashTimer >= DASH_DURATION) {
+                    globalState = 'chase';
+                    UI.estado.innerText = "";
+                }
+            }
+
+            dificultadMult = 1 + (tiempoSobrevivido / 60);
+            spawnInterval = Math.max(0.3, 1.5 - (tiempoSobrevivido / 40));
+
+            spawnTimer += dt;
+            if (spawnTimer >= spawnInterval) {
+                let e = new Enemy();
+                if (globalState === 'charging' || globalState === 'dash') e.prepareDash(player.x, player.y);
+                enemies.push(e);
+                spawnTimer = 0;
+            }
+
+            player.update(dt);
+
+            shakeAmount *= Math.pow(0.05, dt);
+            if (shakeAmount < 0.1) shakeAmount = 0;
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(dt);
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            let enemiesToRemove = new Set();
+            let killCount = 0;
+            let enemiesKilledByPlayerDash = new Set();
+            let gameOverTriggered = false;
+
+            for (let i = 0; i < enemies.length; i++) {
+                enemies[i].update(dt, player.x, player.y);
+                if (checkCollision(player, enemies[i])) {
+                    if (player.isDashing || player.iFrameTimer > 0) {
+                        if (player.isDashing) {
+                            enemiesKilledByPlayerDash.add(i);
+                        }
+                        // Si tiene I-frames pero no está en dash ofensivo, simplemente no muere
+                    } else {
+                        gameOverTriggered = true;
+                    }
+                }
+            }
+
+            if (enemiesKilledByPlayerDash.size > 0) {
+                player.isDashing = false; 
+                player.iFrameTimer = 0.3; // I-frames extra tras impacto para seguridad
+                player.vx *= 0.2; 
+                player.vy *= 0.2; 
+                triggerShake(35);
+                triggerHitstop(0.05); 
+                
+                enemiesKilledByPlayerDash.forEach(index => {
+                    let e = enemies[index];
+                    spawnParticles(e.x, e.y, e.color, 20);
+                    spawnParticles(e.x, e.y, "#ffffff", 10);
+                    puntaje += e.puntos * 3; 
+                    enemiesToRemove.add(index);
+                });
+                
+                killCount += enemiesKilledByPlayerDash.size;
+                colisiones += enemiesKilledByPlayerDash.size;
+                gameOverTriggered = false; 
+            }
+
+            if (gameOverTriggered) {
+                finalizarJuego();
+                return;
+            }
+
+            for (let i = 0; i < enemies.length; i++) {
+                for (let j = i + 1; j < enemies.length; j++) {
+                    if (enemiesToRemove.has(i) || enemiesToRemove.has(j)) continue;
+
+                    const dx = enemies[i].x - enemies[j].x;
+                    const dy = enemies[i].y - enemies[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = enemies[i].radius + enemies[j].radius;
+
+                    if (dist < minDist) {
+                        if (globalState === 'dash') {
+                            enemiesToRemove.add(i);
+                            enemiesToRemove.add(j);
+                            killCount += 2;
+                            colisiones++;
+                            puntaje += (enemies[i].puntos + enemies[j].puntos) * 3;
+                            
+                            triggerShake(25);
+                            triggerHitstop(0.05);
+                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, enemies[i].color, 15);
+                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, "#ffffff", 10);
+                        } else {
+                            const overlap = minDist - dist;
+                            const safeDist = dist === 0 ? 0.01 : dist; 
+                            const pushX = (dx / safeDist) * overlap * 0.5;
+                            const pushY = (dy / safeDist) * overlap * 0.5;
+
+                            enemies[i].x += pushX;
+                            enemies[i].y += pushY;
+                            enemies[j].x -= pushX;
+                            enemies[j].y -= pushY;
+                        }
+                    }
+                }
+            }
+
+            // --- REGENERACIÓN DE STAMINA POR KILLS ---
+            if (killCount > 0) {
+                showCombo(killCount);
+                // Otorga 25 puntos de stamina por cada baja (Dash o Ultimate)
+                player.stamina = Math.min(player.staminaMax, player.stamina + 50 * killCount);
+            }
+
+            if (enemiesToRemove.size > 0) {
+                enemies = enemies.filter((_, index) => !enemiesToRemove.has(index));
+            }
+
+            // --- ACTUALIZAR INTERFAZ (UI) ---
+            UI.score.innerText = `Puntos: ${puntaje}`;
+            UI.time.innerText = `Tiempo: ${tiempoSobrevivido.toFixed(1)}s`;
+            
+            // Stamina HUD
+            const stamPct = (player.stamina / player.staminaMax) * 100;
+            UI.staminaFill.style.width = `${stamPct}%`;
+            if (player.stamina <= 0) UI.staminaFill.classList.add('empty');
+            else UI.staminaFill.classList.remove('empty');
+            UI.staminaText.innerText = `${Math.floor(player.stamina)} / ${player.staminaMax}`;
+
+            // Dash HUD
+            if (player.cooldownTimer > 0) {
+                UI.dashAbility.classList.remove('ready');
+                let cdPct = (player.cooldownTimer / player.cooldownMax) * 100;
+                UI.dashOverlay.style.height = `${cdPct}%`;
+                UI.dashText.style.display = 'block';
+                UI.dashText.innerText = player.cooldownTimer.toFixed(1);
+            } else {
+                UI.dashAbility.classList.add('ready');
+                UI.dashOverlay.style.height = '0%';
+                UI.dashText.style.display = 'none';
+            }
+
+            // Ultimate HUD
+            if (ultCooldown > 0) {
+                UI.ultAbility.classList.remove('ready-ult');
+                let cdPct = (ultCooldown / ULT_MAX_COOLDOWN) * 100;
+                UI.ultOverlay.style.height = `${cdPct}%`;
+                UI.ultText.style.display = 'block';
+                UI.ultText.innerText = ultCooldown.toFixed(1);
+            } else {
+                UI.ultAbility.classList.add('ready-ult');
+                UI.ultOverlay.style.height = '0%';
+                UI.ultText.style.display = 'none';
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            ctx.imageSmoothingEnabled = false;
+            
+            ctx.save();
+            if (shakeAmount > 0) {
+                const sx = (Math.random() - 0.5) * shakeAmount;
+                const sy = (Math.random() - 0.5) * shakeAmount;
+                ctx.translate(sx, sy);
+            }
+
+            // Fondo (Mapa)
+            ctx.drawImage(SPRITES.map, 0, 0, WIDTH, HEIGHT);
+
+            ctx.strokeStyle = globalState === 'charging' ? 'rgba(241, 196, 15, 0.4)' : (globalState === 'dash' ? 'rgba(255, 71, 87, 0.4)' : 'rgba(34, 34, 34, 0.3)');
+            ctx.lineWidth = globalState !== 'chase' ? 4 : 2;
+            
+            ctx.beginPath();
+            for(let i=0; i<=WIDTH; i+=120) {
+                ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT);
+            }
+            for(let i=0; i<=HEIGHT; i+=120) {
+                ctx.moveTo(0, i); ctx.lineTo(WIDTH, i);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#444';
+            for(let door of DOORS) {
+                ctx.fillRect(
+                    door.x === WIDTH ? WIDTH - door.width : door.x - (door.x===WIDTH/2 ? door.width/2 : 0), 
+                    door.y === HEIGHT ? HEIGHT - door.height : door.y - (door.y===HEIGHT/2 ? door.height/2 : 0), 
+                    door.width, door.height
+                );
+            }
+
+            for (let e of enemies) e.draw();
+            for (let p of particles) p.draw();
+            player.draw();
+            
+            ctx.restore();
+        }
+
+        function finalizarJuego() {
+            isGameOver = true;
+            UI.gameOver.style.display = 'flex';
+            UI.finalStats.innerHTML = `Sobreviviste ${tiempoSobrevivido.toFixed(1)}s<br>Colisiones provocadas: ${colisiones}<br>Puntos Totales: ${puntaje}`;
+        }
+
+        iniciarJuego();
+    </script>
+</body>
+</html>

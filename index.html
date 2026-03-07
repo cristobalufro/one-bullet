@@ -2,1016 +2,731 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dodge Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #050505;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: 'Courier New', Courier, monospace;
-            color: white;
-            user-select: none;
-        }
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            max-width: 177.78vh;
-            max-height: 56.25vw;
-            aspect-ratio: 16 / 9;
-            background-color: #111;
-            border: 4px solid #333;
-            box-shadow: 0 0 40px rgba(0,0,0,0.9);
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-        }
-        #ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 3%;
-            box-sizing: border-box;
-        }
-        .hud {
-            display: flex;
-            justify-content: space-between;
-            font-size: 3vmin;
-            font-weight: bold;
-            text-shadow: 2px 2px 0 #000;
-        }
-        .hud-center {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        body { margin: 0; background-color: #000; color: #fff; font-family: monospace; overflow: hidden; user-select: none; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: #111118; cursor: crosshair; }
+        canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; /* Ideal para Pixel Art */ }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; box-sizing: border-box; display: flex; justify-content: space-between; font-size: 1.5rem; text-shadow: 2px 2px 0 #000; pointer-events: none;}
+        #combo-display { position: absolute; top: 100px; width: 100%; text-align: center; color: #f39c12; font-size: 4rem; font-weight: bold; opacity: 0; transition: opacity 0.1s, transform 0.1s; pointer-events: none; text-shadow: 0 0 20px #f39c12;}
+        #combo-timer-text { font-size: 1.5rem; color: #e74c3c; display: block; margin-top: -10px; animation: blink 0.5s infinite; opacity: 0;}
+        #health-bar-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 300px; height: 20px; background: #333; border: 2px solid #fff; border-radius: 10px; overflow: hidden; pointer-events: none;}
+        #health-bar { width: 100%; height: 100%; background: #e74c3c; transition: width 0.1s; }
         
-        /* Central Pulse State (Alertas) */
-        #estadoPulso {
-            position: absolute;
-            top: 15%;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            font-size: 5vmin;
-            font-weight: bold;
-            color: #f1c40f;
-            opacity: 0.9;
-            text-transform: uppercase;
-            text-shadow: 2px 2px 0 #000;
-        }
-
-        /* --- NUEVO BOTTOM HUD (Estilo MOBA) --- */
-        #bottom-hud {
-            position: absolute;
-            bottom: 3%;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: flex-end;
-            gap: 2vmin;
-            background: rgba(10, 10, 10, 0.85);
-            padding: 1.5vmin 3vmin;
-            border-radius: 10px;
-            border: 2px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            pointer-events: none;
-        }
-        .hud-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5vmin;
-        }
-        .hud-label {
-            font-size: 1.5vmin;
-            color: #aaa;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
+        #charge-bar-container { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); width: 300px; height: 12px; background: #333; border: 2px solid #fff; border-radius: 6px; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+        #charge-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f1c40f, #2ecc71); }
         
-        /* Barra de Stamina */
-        .hud-stamina-container {
-            width: 25vmin;
-            height: 3.5vmin;
-            background: #222;
-            border-radius: 5px;
-            border: 2px solid #111;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 3px 5px rgba(0,0,0,0.5);
-            margin-bottom: 0.5vmin;
-        }
-        .hud-stamina-fill {
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(90deg, #20bf6b, #2ed573);
-            transition: width 0.1s linear, background 0.3s;
-        }
-        .hud-stamina-fill.empty {
-            background: linear-gradient(90deg, #eb3b5a, #fc5c65);
-        }
-        .hud-stamina-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.8vmin;
-            font-weight: 900;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-        }
-
-        /* Habilidades (Cuadros) */
-        .hud-ability {
-            width: 7vmin;
-            height: 7vmin;
-            background: #1e1e1e;
-            border: 2px solid #555;
-            border-radius: 8px;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .hud-ability-icon {
-            font-size: 2.2vmin;
-            font-weight: bold;
-            color: #777;
-            z-index: 2;
-        }
-        .hud-ability-cd-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 0%;
-            background: rgba(0, 0, 0, 0.75);
-            z-index: 3;
-            transition: height 0.1s linear;
-        }
-        .hud-ability-cd-text {
-            position: absolute;
-            z-index: 4;
-            font-size: 3vmin;
-            color: #ff4757;
-            font-weight: 900;
-            text-shadow: 2px 2px 0 #000;
-            display: none;
-        }
-        .hud-ability.ready {
-            border-color: #00d2d3;
-            box-shadow: 0 0 15px rgba(0, 210, 211, 0.4), inset 0 0 10px rgba(0, 210, 211, 0.2);
-        }
-        .hud-ability.ready .hud-ability-icon {
-            color: #00d2d3;
-            text-shadow: 0 0 5px rgba(0,210,211,0.5);
-        }
-        .hud-ability.ready-ult {
-            border-color: #9b59b6;
-            box-shadow: 0 0 15px rgba(155, 89, 182, 0.4), inset 0 0 10px rgba(155, 89, 182, 0.2);
-        }
-        .hud-ability.ready-ult .hud-ability-icon {
-            color: #9b59b6;
-            text-shadow: 0 0 5px rgba(155,89,182,0.5);
-        }
-
-        #game-over {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-            z-index: 20;
-        }
-        #game-over h1 { font-size: 8vmin; margin: 0 0 10px 0; color: #ff4757; }
-        #game-over p { font-size: 3vmin; margin: 0 0 30px 0; text-align: center; }
-        
-        /* Combo UI */
-        #combo-container {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 10;
-        }
-        .combo-text {
-            font-size: 10vmin;
-            font-weight: 900;
-            color: #f1c40f;
-            text-shadow: 0 0 20px rgba(241, 196, 15, 0.8), 4px 4px 0 #000;
-            animation: combo-pop 0.5s ease-out forwards;
-            font-style: italic;
-        }
-        @keyframes combo-pop {
-            0% { transform: scale(0.5); opacity: 0; }
-            20% { transform: scale(1.4); opacity: 1; }
-            100% { transform: scale(1); opacity: 0; transform: translateY(-50px); }
-        }
-
-        button {
-            padding: 2vmin 4vmin;
-            font-size: 3vmin;
-            font-weight: bold;
-            font-family: inherit;
-            cursor: pointer;
-            background-color: #2ed573;
-            color: #111;
-            border: none;
-            border-radius: 5px;
-            transition: transform 0.1s, background 0.2s;
-        }
-        button:hover { background-color: #7bed9f; transform: scale(1.05); }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .danger { color: #e74c3c !important; text-shadow: 0 0 15px #e74c3c !important; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="1920" height="1080"></canvas>
-        <div id="combo-container"></div>
-        
+        <canvas id="gameCanvas"></canvas>
         <div id="ui-layer">
-            <div class="hud">
-                <div id="scoreDisplay">Puntos: 0</div>
-                <div id="timeDisplay">Tiempo: 0.0s</div>
-            </div>
-            <div id="estadoPulso"></div>
+            <div>Nivel Nexo: <span id="nexus-level" style="color: #9b59b6;">1</span></div>
+            <div>Cristales: <span id="pocket-score" style="color: #3498db;">0</span></div>
         </div>
-
-        <div id="bottom-hud">
-            <div class="hud-group">
-                <div class="hud-label">STAMINA</div>
-                <div class="hud-stamina-container">
-                    <div id="stamina-fill" class="hud-stamina-fill"></div>
-                    <div id="stamina-text" class="hud-stamina-text">100 / 100</div>
-                </div>
-            </div>
-
-            <div class="hud-group">
-                <div class="hud-label">DASH</div>
-                <div id="ability-dash" class="hud-ability ready">
-                    <div class="hud-ability-icon">SHIFT</div>
-                    <div id="dash-cd-overlay" class="hud-ability-cd-overlay"></div>
-                    <div id="dash-cd-text" class="hud-ability-cd-text"></div>
-                </div>
-            </div>
-
-            <div class="hud-group">
-                <div class="hud-label">ULTIMATE</div>
-                <div id="ability-ult" class="hud-ability ready-ult">
-                    <div class="hud-ability-icon">R</div>
-                    <div id="ult-cd-overlay" class="hud-ability-cd-overlay"></div>
-                    <div id="ult-cd-text" class="hud-ability-cd-text"></div>
-                </div>
-            </div>
+        <div id="combo-display">
+            Combo x<span id="combo-count">1</span>
+            <span id="combo-timer-text">¡MANTÉN EL COMBO!</span>
         </div>
-
-        <div id="game-over">
-            <h1>GAME OVER</h1>
-            <p id="finalStats">Sobreviviste 0s<br>Colisiones provocadas: 0<br>Puntos: 0</p>
-            <button onclick="iniciarJuego()">Volver a Jugar</button>
+        <div id="charge-bar-container">
+            <div id="charge-bar"></div>
+        </div>
+        <div id="health-bar-container">
+            <div id="health-bar"></div>
         </div>
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const UI = {
-            score: document.getElementById('scoreDisplay'),
-            time: document.getElementById('timeDisplay'),
-            estado: document.getElementById('estadoPulso'),
-            gameOver: document.getElementById('game-over'),
-            finalStats: document.getElementById('finalStats'),
-            comboContainer: document.getElementById('combo-container'),
-            
-            // Elementos del Bottom HUD
-            staminaFill: document.getElementById('stamina-fill'),
-            staminaText: document.getElementById('stamina-text'),
-            
-            dashAbility: document.getElementById('ability-dash'),
-            dashOverlay: document.getElementById('dash-cd-overlay'),
-            dashText: document.getElementById('dash-cd-text'),
-            
-            ultAbility: document.getElementById('ability-ult'),
-            ultOverlay: document.getElementById('ult-cd-overlay'),
-            ultText: document.getElementById('ult-cd-text')
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.imageSmoothingEnabled = false;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ==========================================
+    // CONFIGURACIÓN DE TUS SPRITES
+    // Pon los nombres exactos de tus archivos aquí
+    // ==========================================
+    const SPRITES_CONFIG = {
+        player: 'caballero.gif', 
+        enemy: 'enemigo.gif',
+        nexus: 'mago.png'
+    };
+
+    const images = {};
+    Object.keys(SPRITES_CONFIG).forEach(key => {
+        const img = new Image();
+        img.src = SPRITES_CONFIG[key];
+        img.isLoaded = false;
+        img.onload = () => { img.isLoaded = true; };
+        images[key] = img;
+    });
+
+    // --- AUDIO API ---
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    const sounds = {};
+    let lastSwing = 0;
+
+    async function loadAudio() {
+        if (!audioCtx) initAudio();
+        const files = {
+            swing1: 'sword_swing 1.wav',
+            swing2: 'sword_swing 2.wav'
         };
+        for (const [name, url] of Object.entries(files)) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                sounds[name] = await audioCtx.decodeAudioData(arrayBuffer);
+            } catch (e) { console.error("Error loading sound:", name); }
+        }
+    }
 
-        const WIDTH = 1920;
-        const HEIGHT = 1080;
-
-        // --- Carga de Sprites ---
-        const SPRITES = {
-            map: new Image(),
-            player: new Image(),
-            enemies: [
-                new Image(), new Image(), new Image(), new Image(), new Image()
-            ]
-        };
-        SPRITES.map.src = 'map.png';
-        SPRITES.player.src = 'caballero.png';
-        SPRITES.enemies[0].src = 'enemigo.png';
-        SPRITES.enemies[1].src = 'Lizard01.png';
-        SPRITES.enemies[2].src = 'Lizard02.png';
-        SPRITES.enemies[3].src = 'Lizard03.png';
-        SPRITES.enemies[4].src = 'Skeleton.png';
-
-        let lastTime = 0;
-        let isGameOver = false;
-        let animationFrameId;
+    function playSound(type, param) {
+        if (!audioCtx) return;
         
-        let tiempoSobrevivido = 0;
-        let puntaje = 0;
-        let colisiones = 0;
-        let dificultadMult = 1;
+        if (type === 'slash') {
+            const buffer = Math.random() < 0.5 ? sounds.swing1 : sounds.swing2;
+            if (buffer) {
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start();
+            }
+            return;
+        }
 
-        let shakeAmount = 0;
-        let particles = [];
-        let hitstopTimer = 0;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
         
-        const DASH_DURATION = 2.0; 
-        const MAX_CHARGE_TIME = 2.0; 
+        if (type === 'levelUp') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+        } else if (type === 'comboLost') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        }
+    }
+
+    // --- CONFIGURACIÓN DE BALANCE ---
+    const CFG = {
+        PLAYER_BASE_SPEED: 280,
+        PLAYER_MAX_HP: 100,
+        ENEMY_SPEED: 180,
         
-        let chargeTimer = 0;
-        let pulseDashTimer = 0;
-        let globalState = 'chase'; 
+        MIN_SLASH_RADIUS: 130,    
+        MAX_SLASH_RADIUS: 320,   
+        MIN_SLASH_ANGLE: Math.PI / 2.5, 
+        MAX_SLASH_ANGLE: Math.PI * 1.2, 
         
-        // Ultimate Cooldown
-        let ultCooldown = 0;
-        const ULT_MAX_COOLDOWN = 20.0;
+        SLASH_COOLDOWN: 0.35,
+        COMBO_TIME: 2.5,
+        MAX_ENEMIES: 400,
+        NEXUS_BASE_COST: 50,
+        CHARGE_TIME: 1.0, // Un poco menos para que se sienta mejor
+        CHARGE_DELAY: 0.5 // Delay antes de empezar a cargar
+    };
 
-        let player;
-        let enemies = [];
-        let spawnTimer = 0;
-        let spawnInterval = 2;
+    let lastTime = performance.now();
+    let mouseDownTimer = 0;
+    let mouseDownActive = false;
+    let hitstopTimer = 0;
+    let spawnTimer = 0;
+    let spawnInterval = 0.4; 
+    let screenShake = 0; 
 
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.vx = (Math.random() - 0.5) * 800;
-                this.vy = (Math.random() - 0.5) * 800;
-                this.radius = Math.random() * 8 + 4;
-                this.life = 1.0;
-                this.color = color;
+    // --- ENTIDADES ---
+    const camera = { x: 0, y: 0 };
+    
+    const player = { 
+        x: 0, y: 300, radius: 20, color: '#3498db', 
+        hp: CFG.PLAYER_MAX_HP, invulnTimer: 0,
+        facingX: 1, facingY: 0, renderFacing: 1, // renderFacing sirve para voltear el sprite
+        slashCooldown: 0, isSlashing: false, slashVisualTimer: 0,
+        combo: 0, comboTimer: 0, pocketMana: 0,
+        lastSlashRadius: CFG.MIN_SLASH_RADIUS,
+        lastSlashAngle: CFG.MIN_SLASH_ANGLE,
+        isCharging: false, chargeLevel: 0, isSuperSlash: false
+    };
+
+    const nexus = { 
+        x: 0, y: 0, size: 100, color: '#9b59b6', 
+        level: 1, mana: 0, nextCost: CFG.NEXUS_BASE_COST 
+    };
+    
+    let enemies = [];
+    let loots = [];
+    let floatingTexts = [];
+    let keys = {};
+    let mouseX = canvas.width / 2;
+    let mouseY = canvas.height / 2;
+
+    window.addEventListener('keydown', e => { keys[e.code] = true; });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+    window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+    window.addEventListener('mousedown', e => {
+        if (!audioCtx) {
+            initAudio();
+            loadAudio();
+        }
+        if (player.slashCooldown <= 0 && player.hp > 0) {
+            doSlash(); // Ataque instantáneo
+            mouseDownActive = true;
+            mouseDownTimer = 0;
+            player.chargeLevel = 0;
+        }
+    });
+    window.addEventListener('mouseup', e => {
+        if (mouseDownActive) {
+            if (player.isCharging && player.chargeLevel >= CFG.CHARGE_TIME) {
+                doSlash(); // Release full charge
             }
-            update(dt) {
-                this.x += this.vx * dt;
-                this.y += this.vy * dt;
-                this.vx *= 0.96;
-                this.vy *= 0.96;
-                this.life -= dt * 1.5;
-            }
-            draw() {
-                ctx.globalAlpha = Math.max(0, this.life);
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
+            player.isCharging = false;
+            mouseDownActive = false;
+            document.getElementById('charge-bar-container').style.opacity = 0;
+        }
+    });
+
+    // --- SISTEMAS ---
+    function doSlash() {
+        let isFullCharge = player.chargeLevel >= CFG.CHARGE_TIME;
+        
+        // El tajo cargado ignora el cooldown normal
+        if (player.slashCooldown > 0 && !isFullCharge) return;
+
+        playSound('slash');
+
+        let dx = mouseX - (canvas.width / 2);
+        let dy = mouseY - (canvas.height / 2);
+        let length = Math.sqrt(dx*dx + dy*dy);
+        if (length > 0) {
+            player.facingX = dx / length;
+            player.facingY = dy / length;
+            if (player.facingX < 0) player.renderFacing = -1;
+            else if (player.facingX > 0) player.renderFacing = 1;
         }
 
-        function triggerShake(amt) {
-            shakeAmount = Math.max(shakeAmount, amt);
+        player.slashCooldown = CFG.SLASH_COOLDOWN;
+        player.isSlashing = true;
+        player.slashVisualTimer = 0.15; 
+
+        player.isSuperSlash = isFullCharge;
+
+        if (isFullCharge) {
+            player.lastSlashRadius = 400; // Un poco más grande
+            player.lastSlashAngle = Math.PI * 2;
+            player.slashVisualTimer = 0.3; 
+        } else {
+            let comboFactor = Math.min(player.combo / 100, 1.0); 
+            // Como es instantáneo, el chargeFactor es 1.0 (o basado en combo)
+            player.lastSlashRadius = CFG.MIN_SLASH_RADIUS + (CFG.MAX_SLASH_RADIUS - CFG.MIN_SLASH_RADIUS) * comboFactor;
+            player.lastSlashAngle = CFG.MIN_SLASH_ANGLE + (CFG.MAX_SLASH_ANGLE - CFG.MIN_SLASH_ANGLE) * comboFactor;
         }
 
-        function triggerHitstop(duration) {
-            hitstopTimer = duration;
-        }
+        let hitCount = 0;
 
-        function spawnParticles(x, y, color, count = 10) {
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, color));
-            }
-        }
+        enemies.forEach(e => {
+            let edx = e.x - player.x;
+            let edy = e.y - player.y;
+            let dist = Math.sqrt(edx*edx + edy*edy);
 
-        function showCombo(n) {
-            if (n < 2) return;
-            const div = document.createElement('div');
-            div.className = 'combo-text';
-            div.innerText = `x${n} COMBO!`;
-            UI.comboContainer.innerHTML = '';
-            UI.comboContainer.appendChild(div);
-        }
-
-        const keys = { 
-            KeyW: false, KeyA: false, KeyS: false, KeyD: false, 
-            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false, 
-            KeyR: false, ShiftLeft: false, ShiftRight: false 
-        };
-
-        window.addEventListener('keydown', (e) => { 
-            if(keys.hasOwnProperty(e.code)) {
-                keys[e.code] = true;
-                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
-            }
-        });
-        window.addEventListener('keyup', (e) => { 
-            if(keys.hasOwnProperty(e.code)) {
-                keys[e.code] = false;
-                if(e.code === 'KeyR' || e.code.includes('Shift')) e.preventDefault();
-            }
-        });
-        window.addEventListener('blur', () => {
-            for (let key in keys) keys[key] = false;
-        });
-
-        const DOORS = [
-            { x: 0, y: HEIGHT / 2, width: 20, height: 200 },        
-            { x: WIDTH, y: HEIGHT / 2, width: 20, height: 200 },    
-            { x: WIDTH / 2, y: HEIGHT, width: 300, height: 20 }     
-        ];
-
-        class Player {
-            constructor() {
-                this.x = WIDTH / 2;
-                this.y = HEIGHT / 2;
-                this.radius = 20; 
-                this.color = '#1e90ff';
-                
-                this.vx = 0; 
-                this.vy = 0;
-                this.acceleration = 7500; 
-                this.friction = 10;       
-                
-                this.isDashing = false;
-                this.dashSpeed = 3000; 
-                this.dashTimeMax = 0.15; 
-                this.dashTimer = 0;
-                this.cooldownMax = 1; 
-                this.cooldownTimer = 0;
-
-                this.staminaMax = 100;
-                this.stamina = 100;
-
-                this.trail = [];
-                this.trailTimer = 0;
-                this.iFrameTimer = 0;
-            }
-
-            update(dt) {
-                if (this.cooldownTimer > 0) this.cooldownTimer -= dt;
-                if (this.iFrameTimer > 0) this.iFrameTimer -= dt;
-
-                let dx = 0; let dy = 0;
-                if (keys.KeyW || keys.ArrowUp) dy -= 1;
-                if (keys.KeyS || keys.ArrowDown) dy += 1;
-                if (keys.KeyA || keys.ArrowLeft) dx -= 1;
-                if (keys.KeyD || keys.ArrowRight) dx += 1;
-
-                if (dx !== 0 && dy !== 0) {
-                    const length = Math.sqrt(dx * dx + dy * dy);
-                    dx /= length; dy /= length;
-                }
-
-                const isMoving = (dx !== 0 || dy !== 0);
-
-                if (this.isDashing) {
-                    this.dashTimer -= dt;
-                    if (this.dashTimer <= 0) {
-                        this.isDashing = false;
-                        this.vx *= 0.5;
-                        this.vy *= 0.5;
-                    }
-                } else {
-                    // La Stamina SÓLO se gasta al moverse. No se regenera pasivamente (o muy lento).
-                    if (isMoving) {
-                        this.stamina = Math.max(0, this.stamina - 40 * dt);
-                    }
-
-                    if ((keys.ShiftLeft || keys.ShiftRight) && this.cooldownTimer <= 0 && isMoving) {
-                        this.isDashing = true;
-                        this.dashTimer = this.dashTimeMax;
-                        this.cooldownTimer = this.cooldownMax;
-                        this.vx = dx * this.dashSpeed;
-                        this.vy = dy * this.dashSpeed;
-                        this.iFrameTimer = this.dashTimeMax + 0.1; // I-frames durante el dash + 0.1s extra
+            // Detección mejorada: radius del enemigo ayuda a ser golpeado
+            if (dist <= player.lastSlashRadius + e.radius) {
+                let dot = (edx/dist)*player.facingX + (edy/dist)*player.facingY;
+                // Si es super slash, ignoramos el ángulo (es 360)
+                if (isFullCharge || dot > Math.cos(player.lastSlashAngle/2)) {
+                    hitCount++; // CADA GOLPE suma al combo, incluso si no muere
+                    
+                    if (isFullCharge) {
+                        e.hp = 0; // Super slash aniquila todo
                     } else {
-                        let currentAccel = this.acceleration;
-                        if (this.stamina <= 0) {
-                            currentAccel *= 0.5; // Penalización por cansancio
+                        e.hp -= 1;
+                        // Empujón al golpear enemigos grandes
+                        if (e.hp > 0) {
+                            e.x += (edx/dist) * 40;
+                            e.y += (edy/dist) * 40;
                         }
-                        this.vx += dx * currentAccel * dt;
-                        this.vy += dy * currentAccel * dt;
                     }
-                }
-
-                const currentFriction = this.isDashing ? 2 : this.friction;
-                this.vx -= this.vx * currentFriction * dt;
-                this.vy -= this.vy * currentFriction * dt;
-
-                this.x += this.vx * dt;
-                this.y += this.vy * dt;
-
-                if (this.x < this.radius) { this.x = this.radius; this.vx = 0; }
-                if (this.x > WIDTH - this.radius) { this.x = WIDTH - this.radius; this.vx = 0; }
-                if (this.y < this.radius) { this.y = this.radius; this.vy = 0; }
-                if (this.y > HEIGHT - this.radius) { this.y = HEIGHT - this.radius; this.vy = 0; }
-
-                this.trailTimer += dt;
-                if (this.trailTimer > 0.02) { 
-                    this.trail.push({x: this.x, y: this.y, alpha: 0.6});
-                    if (this.trail.length > 10) this.trail.shift(); 
-                    this.trailTimer = 0;
-                }
-                for (let t of this.trail) t.alpha -= 3 * dt;
-                this.trail = this.trail.filter(t => t.alpha > 0);
-            }
-
-            draw() {
-                const img = SPRITES.player;
-                const aspect = img.naturalWidth / img.naturalHeight || 2;
-                const drawH = this.radius * 6; 
-                const drawW = drawH * aspect;
-
-                for (let i = 0; i < this.trail.length; i++) {
-                    const t = this.trail[i];
-                    ctx.save();
-                    ctx.translate(t.x, t.y);
-                    if (this.vx > 10) ctx.scale(-1, 1);
-                    ctx.globalAlpha = Math.max(0, t.alpha);
-                    ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
-                    ctx.restore();
-                }
-
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                if (this.vx > 10) ctx.scale(-1, 1);
-                
-                if (this.isDashing) {
-                    ctx.shadowBlur = 30;
-                    ctx.shadowColor = '#ff4757';
-                } else if (this.iFrameTimer > 0) {
-                    ctx.globalAlpha = 0.6; // Visual feedback para I-frames post-dash
-                }
-
-                ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
-                ctx.restore();
-            }
-        }
-
-        class Enemy {
-            constructor() {
-                const door = DOORS[Math.floor(Math.random() * DOORS.length)];
-                if (door.width > door.height) { 
-                    this.x = door.x - door.width/2 + Math.random() * door.width;
-                    this.y = door.y;
-                } else { 
-                    this.x = door.x;
-                    this.y = door.y - door.height/2 + Math.random() * door.height;
-                }
-
-                this.isFast = Math.random() < 0.3;
-                if (this.isFast) {
-                    this.radius = 12;
-                    this.speed = 450 * dificultadMult;
-                    this.color = '#ffa502';
-                    this.puntos = 20;
-                } else {
-                    this.radius = 24;
-                    this.speed = 300 * dificultadMult;
-                    this.color = '#ff4757';
-                    this.puntos = 10;
-                }
-
-                this.dashDx = 0;
-                this.dashDy = 0;
-                this.lifeTime = Math.random() * 100; 
-                this.wobbleSpeed = 1 + Math.random() * 2; 
-                this.wobbleAmount = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.5); 
-                this.sprite = SPRITES.enemies[Math.floor(Math.random() * SPRITES.enemies.length)];
-                this.facingLeft = Math.random() > 0.5;
-
-                this.microDashTimer = 1.5 + Math.random() * 1.5; 
-                this.isMicroDashing = false;
-                this.microDashTime = 0;
-                this.microDashDx = 0;
-                this.microDashDy = 0;
-            }
-
-            prepareDash(px, py) {
-                const dx = px - this.x;
-                const dy = py - this.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist > 0) {
-                    this.dashDx = dx / dist;
-                    this.dashDy = dy / dist;
-                } else {
-                    this.dashDx = 1; this.dashDy = 0;
-                }
-            }
-
-            update(dt, px, py) {
-                this.lifeTime += dt;
-
-                if (globalState === 'chase') {
-                    const dx = px - this.x;
-                    const dy = py - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (this.isMicroDashing) {
-                        this.microDashTime += dt;
-                        const dashSpeedMultiplier = 2.5; 
-                        const vx = this.microDashDx * this.speed * dashSpeedMultiplier;
-                        this.x += vx * dt;
-                        this.y += this.microDashDy * this.speed * dashSpeedMultiplier * dt;
-                        
-                        if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
-
-                        if (this.microDashTime >= 0.3) {
-                            this.isMicroDashing = false;
-                            this.microDashTimer = 1.5 + Math.random() * 1.5;
-                        }
-                    } else {
-                        if (dist > 0) {
-                            let targetAngle = Math.atan2(dy, dx);
-                            const distFactor = Math.min(1, dist / 400); 
-                            targetAngle += Math.sin(this.lifeTime * this.wobbleSpeed) * this.wobbleAmount * distFactor;
-                            
-                            const vx = Math.cos(targetAngle) * this.speed;
-                            this.x += vx * dt;
-                            this.y += Math.sin(targetAngle) * this.speed * dt;
-                            
-                            if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
-                        }
-
-                        this.microDashTimer -= dt;
-                        if (this.microDashTimer <= 0 && dist > 0) {
-                            this.isMicroDashing = true;
-                            this.microDashTime = 0;
-                            this.microDashDx = dx / dist;
-                            this.microDashDy = dy / dist;
-                        }
-                    }
-                } else if (globalState === 'dash') {
-                    const dashSpeedMultiplier = 3.5;
-                    const vx = this.dashDx * this.speed * dashSpeedMultiplier;
-                    this.x += vx * dt;
-                    this.y += this.dashDy * this.speed * dashSpeedMultiplier * dt;
-
-                    if (Math.abs(vx) > 10) this.facingLeft = vx < 0;
-
-                    if (this.x <= this.radius || this.x >= WIDTH - this.radius) {
-                        this.dashDx *= -1;
-                        this.x = Math.max(this.radius, Math.min(WIDTH - this.radius, this.x));
-                    }
-                    if (this.y <= this.radius || this.y >= HEIGHT - this.radius) {
-                        this.dashDy *= -1;
-                        this.y = Math.max(this.radius, Math.min(HEIGHT - this.radius, this.y));
+                    if (e.hp <= 0) {
+                        e.dead = true;
+                        spawnLoot(e.x, e.y, player.combo);
                     }
                 }
             }
+        });
 
-            draw() {
-                if (globalState === 'charging') {
-                    const arrowLength = this.radius * 12;
-                    const endX = this.x + this.dashDx * arrowLength;
-                    const endY = this.y + this.dashDy * arrowLength;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y);
-                    ctx.lineTo(endX, endY);
-                    
-                    const angle = Math.atan2(this.dashDy, this.dashDx);
-                    ctx.lineTo(endX - 15 * Math.cos(angle - Math.PI/8), endY - 15 * Math.sin(angle - Math.PI/8));
-                    ctx.moveTo(endX, endY);
-                    ctx.lineTo(endX - 15 * Math.cos(angle + Math.PI/8), endY - 15 * Math.sin(angle + Math.PI/8));
-                    
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                
-                if (this.isMicroDashing) {
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#ff4757';
-                }
-
-                const waddleFreq = 12;
-                const waddleAmp = 10;
-                const tiltAmp = 0.15;
-                const bounce = Math.abs(Math.sin(this.lifeTime * waddleFreq)) * waddleAmp;
-                const tilt = Math.sin(this.lifeTime * waddleFreq) * tiltAmp;
-                
-                ctx.translate(0, -bounce);
-                ctx.rotate(tilt);
-                
-                if (!this.facingLeft) ctx.scale(-1, 1);
-                
-                const img = this.sprite;
-                const aspect = img.naturalWidth / img.naturalHeight || 2;
-                const drawH = this.radius * 6; 
-                const drawW = drawH * aspect;
-                
-                ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
-                ctx.restore();
-            }
-        }
-
-        function checkCollision(obj1, obj2) {
-            const dx = obj1.x - obj2.x;
-            const dy = obj1.y - obj2.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            return dist < (obj1.radius + obj2.radius);
-        }
-
-        function iniciarJuego() {
-            player = new Player();
-            enemies = [];
-            particles = [];
-            shakeAmount = 0;
-            hitstopTimer = 0;
-            ultCooldown = 0;
-            UI.comboContainer.innerHTML = '';
-            tiempoSobrevivido = 0;
-            puntaje = 0;
-            colisiones = 0;
-            dificultadMult = 1;
+        if (hitCount > 0) {
+            hitstopTimer = 0.03 + (hitCount * (isFullCharge ? 0.015 : 0.008));
+            // Super slash multiplica combo, tajo rápido suma normal
+            let comboGain = isFullCharge ? hitCount * 3 : hitCount;
+            player.combo += comboGain;
             
+            player.comboTimer = CFG.COMBO_TIME;
+            screenShake = isFullCharge ? 25 : Math.min(player.combo * 0.5, 15); 
+        } else {
+            if (!isFullCharge) loseCombo(); 
+        }
+        
+        player.chargeLevel = 0;
+    }
+
+    function loseCombo() {
+        if (player.combo > 5) playSound('comboLost');
+        player.combo = 0;
+        player.comboTimer = 0;
+        screenShake = 0;
+    }
+
+    function spawnEnemy() {
+        if (enemies.length >= CFG.MAX_ENEMIES) return;
+        let angle = Math.random() * Math.PI * 2;
+        let dist = Math.max(canvas.width, canvas.height) / 2 + 200;
+        let ex = player.x + Math.cos(angle) * dist;
+        let ey = player.y + Math.sin(angle) * dist;
+        
+        let isBig = Math.random() < 0.15; // 15% de enemigos grandes
+        enemies.push({ 
+            x: ex, y: ey, 
+            radius: isBig ? 35 : 18, 
+            color: isBig ? '#c0392b' : '#e74c3c', 
+            facing: 1,
+            hp: isBig ? 4 : 1,
+            speed: isBig ? CFG.ENEMY_SPEED * 0.6 : CFG.ENEMY_SPEED
+        });
+    }
+
+    function spawnLoot(x, y, combo) {
+        let isHuge = combo >= 30;
+        let isMedium = combo >= 10;
+        loots.push({
+            x: x + (Math.random()*20 - 10), y: y + (Math.random()*20 - 10),
+            size: isHuge ? 20 : (isMedium ? 12 : 6),
+            color: isHuge ? '#f1c40f' : (isMedium ? '#2ecc71' : '#3498db'),
+            value: isHuge ? 30 : (isMedium ? 5 : 1),
+            life: 6.0
+        });
+    }
+
+    function spawnFloatingText(x, y, text, color) {
+        floatingTexts.push({ x: x, y: y, text: text, color: color, life: 2.0 });
+    }
+
+    function upgradePlayer() {
+        playSound('levelUp');
+        nexus.level++;
+        nexus.mana -= nexus.nextCost;
+        nexus.nextCost = Math.floor(nexus.nextCost * 1.5); 
+        
+        const rand = Math.random();
+        let upgradeText = "";
+        
+        if (rand < 0.33) {
+            CFG.MAX_SLASH_RADIUS += 15;
+            CFG.MIN_SLASH_RADIUS += 5;
+            upgradeText = "+ RANGO MÁXIMO";
+        } else if (rand < 0.66) {
+            CFG.SLASH_COOLDOWN = Math.max(0.15, CFG.SLASH_COOLDOWN - 0.03);
+            upgradeText = "+ VELOCIDAD DE ATAQUE";
+        } else {
+            CFG.PLAYER_BASE_SPEED += 15;
+            upgradeText = "+ AGILIDAD BASE";
+        }
+
+        spawnInterval = Math.max(0.05, spawnInterval - 0.06); 
+        
+        spawnFloatingText(nexus.x, nexus.y - 80, "¡NIVEL " + nexus.level + "!", "#9b59b6");
+        spawnFloatingText(nexus.x, nexus.y - 50, upgradeText, "#f1c40f");
+    }
+
+    // --- GAME LOOP ---
+    function update(dt) {
+        if (player.hp <= 0) {
+            player.isCharging = false;
+            document.getElementById('charge-bar-container').style.opacity = 0;
+            return;
+        }
+
+        if (player.slashCooldown > 0) player.slashCooldown -= dt;
+        if (player.slashVisualTimer > 0) player.slashVisualTimer -= dt;
+        if (player.invulnTimer > 0) player.invulnTimer -= dt;
+        if (screenShake > 0) screenShake -= dt * 60;
+
+        if (mouseDownActive && !player.isCharging) {
+            mouseDownTimer += dt;
+            if (mouseDownTimer >= CFG.CHARGE_DELAY) {
+                player.isCharging = true;
+                player.chargeLevel = 0;
+                document.getElementById('charge-bar-container').style.opacity = 1;
+            }
+        }
+
+        if (player.isCharging) {
+            player.chargeLevel += dt;
+            let chargePerc = Math.min(100, (player.chargeLevel / CFG.CHARGE_TIME) * 100);
+            document.getElementById('charge-bar').style.width = chargePerc + '%';
+        }
+        
+        if (player.comboTimer > 0) {
+            player.comboTimer -= dt;
+            if (player.comboTimer <= 0) loseCombo();
+        }
+
+        let vx = 0; let vy = 0;
+        if (keys['KeyW']) vy = -1;
+        if (keys['KeyS']) vy = 1;
+        if (keys['KeyA']) vx = -1;
+        if (keys['KeyD']) vx = 1;
+
+        let comboSpeedBonus = Math.min(player.combo * 2, 150);
+        let currentSpeed = CFG.PLAYER_BASE_SPEED + comboSpeedBonus;
+        if (player.isCharging) currentSpeed *= 0.3; 
+
+        if (vx !== 0 || vy !== 0) {
+            let length = Math.sqrt(vx*vx + vy*vy);
+            player.x += (vx / length) * currentSpeed * dt;
+            player.y += (vy / length) * currentSpeed * dt;
+            // Actualizar hacia donde mira gráficamente el jugador mientras camina
+            if (vx < 0) player.renderFacing = -1;
+            else if (vx > 0) player.renderFacing = 1;
+        }
+
+        spawnTimer += dt;
+        if (spawnTimer >= spawnInterval) {
             spawnTimer = 0;
-            spawnInterval = 2;
-            
-            globalState = 'chase';
-            UI.estado.innerText = "";
-            
-            for (let key in keys) keys[key] = false;
-
-            isGameOver = false;
-            UI.gameOver.style.display = 'none';
-            lastTime = performance.now();
-            
-            cancelAnimationFrame(animationFrameId);
-            gameLoop(lastTime);
+            spawnEnemy();
         }
 
-        function gameLoop(currentTime) {
-            if (isGameOver) return;
-            const dt = (currentTime - lastTime) / 1000;
-            lastTime = currentTime;
-            update(dt);
-            draw();
-            animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        function update(dt) {
-            if (hitstopTimer > 0) {
-                hitstopTimer -= dt;
-                return;
+        enemies.forEach(e => {
+            let dx = player.x - e.x; let dy = player.y - e.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > 0) {
+                e.x += (dx / dist) * (e.speed || CFG.ENEMY_SPEED) * dt;
+                e.y += (dy / dist) * (e.speed || CFG.ENEMY_SPEED) * dt;
+                // Actualizar sprite del enemigo (mirar izquierda o derecha)
+                if (dx < 0) e.facing = 1; // El jugador está a la izquierda, el enemigo va a la izquierda
+                else e.facing = -1;
             }
-            tiempoSobrevivido += dt;
-            if (ultCooldown > 0) ultCooldown -= dt;
-            
-            // --- Ultimate Global (Ahora en la tecla R) ---
-            if (globalState === 'chase' && keys.KeyR && ultCooldown <= 0) {
-                globalState = 'charging';
-                chargeTimer = 0;
-                ultCooldown = ULT_MAX_COOLDOWN;
-                UI.estado.innerText = "APUNTANDO";
-                UI.estado.style.color = "#f1c40f";
-            } 
-            else if (globalState === 'charging') {
-                chargeTimer += dt;
-                for (let e of enemies) e.prepareDash(player.x, player.y);
-
-                let remaining = Math.max(0, MAX_CHARGE_TIME - chargeTimer);
-                UI.estado.innerText = `¡APUNTANDO! (${remaining.toFixed(1)}s)`;
-
-                if (chargeTimer >= MAX_CHARGE_TIME) {
-                    globalState = 'dash';
-                    pulseDashTimer = 0;
-                    UI.estado.innerText = "EMBESTIDA";
-                    UI.estado.style.color = "#ff4757";
-                }
-            } 
-            else if (globalState === 'dash') {
-                pulseDashTimer += dt;
-                if (pulseDashTimer >= DASH_DURATION) {
-                    globalState = 'chase';
-                    UI.estado.innerText = "";
-                }
+            if (dist < player.radius + e.radius && player.invulnTimer <= 0) {
+                player.hp -= 15;
+                loseCombo();
+                player.invulnTimer = 0.5;
+                screenShake = 20;
+                if (player.hp < 0) player.hp = 0;
+                document.getElementById('health-bar').style.width = (player.hp / CFG.PLAYER_MAX_HP * 100) + '%';
+                e.x -= (dx / dist) * 100; e.y -= (dy / dist) * 100;
             }
+        });
+        enemies = enemies.filter(e => !e.dead);
 
-            dificultadMult = 1 + (tiempoSobrevivido / 60);
-            spawnInterval = Math.max(0.3, 1.5 - (tiempoSobrevivido / 40));
-
-            spawnTimer += dt;
-            if (spawnTimer >= spawnInterval) {
-                let e = new Enemy();
-                if (globalState === 'charging' || globalState === 'dash') e.prepareDash(player.x, player.y);
-                enemies.push(e);
-                spawnTimer = 0;
+        loots.forEach(l => {
+            l.life -= dt;
+            let dx = player.x - l.x; let dy = player.y - l.y;
+            let magnetRadius = player.radius + 60 + Math.min(player.combo, 100);
+            if (Math.sqrt(dx*dx + dy*dy) < magnetRadius) {
+                player.pocketMana += l.value;
+                l.collected = true;
             }
+        });
+        loots = loots.filter(l => !l.collected && l.life > 0);
 
-            player.update(dt);
-
-            shakeAmount *= Math.pow(0.05, dt);
-            if (shakeAmount < 0.1) shakeAmount = 0;
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update(dt);
-                if (particles[i].life <= 0) particles.splice(i, 1);
-            }
-
-            let enemiesToRemove = new Set();
-            let killCount = 0;
-            let enemiesKilledByPlayerDash = new Set();
-            let gameOverTriggered = false;
-
-            for (let i = 0; i < enemies.length; i++) {
-                enemies[i].update(dt, player.x, player.y);
-                if (checkCollision(player, enemies[i])) {
-                    if (player.isDashing || player.iFrameTimer > 0) {
-                        if (player.isDashing) {
-                            enemiesKilledByPlayerDash.add(i);
-                        }
-                        // Si tiene I-frames pero no está en dash ofensivo, simplemente no muere
-                    } else {
-                        gameOverTriggered = true;
-                    }
-                }
-            }
-
-            if (enemiesKilledByPlayerDash.size > 0) {
-                player.isDashing = false; 
-                player.iFrameTimer = 0.3; // I-frames extra tras impacto para seguridad
-                player.vx *= 0.2; 
-                player.vy *= 0.2; 
-                triggerShake(35);
-                triggerHitstop(0.05); 
+        let mdx = player.x - nexus.x; let mdy = player.y - nexus.y;
+        if (Math.sqrt(mdx*mdx + mdy*mdy) < nexus.size/2 + player.radius) {
+            if (player.pocketMana > 0) {
+                let transfer = Math.min(player.pocketMana, 5 + (player.pocketMana*0.1)); 
+                nexus.mana += transfer;
+                player.pocketMana -= transfer;
                 
-                enemiesKilledByPlayerDash.forEach(index => {
-                    let e = enemies[index];
-                    spawnParticles(e.x, e.y, e.color, 20);
-                    spawnParticles(e.x, e.y, "#ffffff", 10);
-                    puntaje += e.puntos * 3; 
-                    enemiesToRemove.add(index);
-                });
-                
-                killCount += enemiesKilledByPlayerDash.size;
-                colisiones += enemiesKilledByPlayerDash.size;
-                gameOverTriggered = false; 
-            }
-
-            if (gameOverTriggered) {
-                finalizarJuego();
-                return;
-            }
-
-            for (let i = 0; i < enemies.length; i++) {
-                for (let j = i + 1; j < enemies.length; j++) {
-                    if (enemiesToRemove.has(i) || enemiesToRemove.has(j)) continue;
-
-                    const dx = enemies[i].x - enemies[j].x;
-                    const dy = enemies[i].y - enemies[j].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = enemies[i].radius + enemies[j].radius;
-
-                    if (dist < minDist) {
-                        if (globalState === 'dash') {
-                            enemiesToRemove.add(i);
-                            enemiesToRemove.add(j);
-                            killCount += 2;
-                            colisiones++;
-                            puntaje += (enemies[i].puntos + enemies[j].puntos) * 3;
-                            
-                            triggerShake(25);
-                            triggerHitstop(0.05);
-                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, enemies[i].color, 15);
-                            spawnParticles((enemies[i].x + enemies[j].x)/2, (enemies[i].y + enemies[j].y)/2, "#ffffff", 10);
-                        } else {
-                            const overlap = minDist - dist;
-                            const safeDist = dist === 0 ? 0.01 : dist; 
-                            const pushX = (dx / safeDist) * overlap * 0.5;
-                            const pushY = (dy / safeDist) * overlap * 0.5;
-
-                            enemies[i].x += pushX;
-                            enemies[i].y += pushY;
-                            enemies[j].x -= pushX;
-                            enemies[j].y -= pushY;
-                        }
-                    }
+                if (player.hp < CFG.PLAYER_MAX_HP) {
+                    player.hp = Math.min(CFG.PLAYER_MAX_HP, player.hp + 0.2);
+                    document.getElementById('health-bar').style.width = (player.hp / CFG.PLAYER_MAX_HP * 100) + '%';
                 }
-            }
 
-            // --- REGENERACIÓN DE STAMINA POR KILLS ---
-            if (killCount > 0) {
-                showCombo(killCount);
-                // Otorga 25 puntos de stamina por cada baja (Dash o Ultimate)
-                player.stamina = Math.min(player.staminaMax, player.stamina + 50 * killCount);
-            }
-
-            if (enemiesToRemove.size > 0) {
-                enemies = enemies.filter((_, index) => !enemiesToRemove.has(index));
-            }
-
-            // --- ACTUALIZAR INTERFAZ (UI) ---
-            UI.score.innerText = `Puntos: ${puntaje}`;
-            UI.time.innerText = `Tiempo: ${tiempoSobrevivido.toFixed(1)}s`;
-            
-            // Stamina HUD
-            const stamPct = (player.stamina / player.staminaMax) * 100;
-            UI.staminaFill.style.width = `${stamPct}%`;
-            if (player.stamina <= 0) UI.staminaFill.classList.add('empty');
-            else UI.staminaFill.classList.remove('empty');
-            UI.staminaText.innerText = `${Math.floor(player.stamina)} / ${player.staminaMax}`;
-
-            // Dash HUD
-            if (player.cooldownTimer > 0) {
-                UI.dashAbility.classList.remove('ready');
-                let cdPct = (player.cooldownTimer / player.cooldownMax) * 100;
-                UI.dashOverlay.style.height = `${cdPct}%`;
-                UI.dashText.style.display = 'block';
-                UI.dashText.innerText = player.cooldownTimer.toFixed(1);
-            } else {
-                UI.dashAbility.classList.add('ready');
-                UI.dashOverlay.style.height = '0%';
-                UI.dashText.style.display = 'none';
-            }
-
-            // Ultimate HUD
-            if (ultCooldown > 0) {
-                UI.ultAbility.classList.remove('ready-ult');
-                let cdPct = (ultCooldown / ULT_MAX_COOLDOWN) * 100;
-                UI.ultOverlay.style.height = `${cdPct}%`;
-                UI.ultText.style.display = 'block';
-                UI.ultText.innerText = ultCooldown.toFixed(1);
-            } else {
-                UI.ultAbility.classList.add('ready-ult');
-                UI.ultOverlay.style.height = '0%';
-                UI.ultText.style.display = 'none';
+                if (nexus.mana >= nexus.nextCost) {
+                    upgradePlayer();
+                }
             }
         }
 
-        function draw() {
-            ctx.clearRect(0, 0, WIDTH, HEIGHT);
-            ctx.imageSmoothingEnabled = false;
+        floatingTexts.forEach(ft => {
+            ft.life -= dt;
+            ft.y -= 30 * dt; 
+        });
+        floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+
+        camera.x += (player.x - camera.x) * 8 * dt;
+        camera.y += (player.y - camera.y) * 8 * dt;
+
+        document.getElementById('pocket-score').innerText = Math.floor(player.pocketMana);
+        document.getElementById('nexus-level').innerText = nexus.level;
+        
+        let comboUI = document.getElementById('combo-display');
+        let comboTimerUI = document.getElementById('combo-timer-text');
+        let comboCountUI = document.getElementById('combo-count');
+
+        if (player.combo > 1) {
+            comboCountUI.innerText = player.combo;
+            comboUI.style.opacity = 1;
+            let scale = 1 + Math.min(player.combo * 0.02, 1.0);
+            comboUI.style.transform = `scale(${scale})`;
             
+            if (player.comboTimer < 1.0) {
+                comboUI.classList.add('danger');
+                comboTimerUI.style.opacity = 1;
+            } else {
+                comboUI.classList.remove('danger');
+                comboTimerUI.style.opacity = 0;
+            }
+        } else {
+            comboUI.style.opacity = 0;
+            comboUI.classList.remove('danger');
+            comboTimerUI.style.opacity = 0;
+        }
+    }
+
+    // --- FUNCIÓN HELPER PARA DIBUJAR SPRITES VOLTEADOS ---
+    function drawSprite(img, x, y, size, facingX) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (facingX < 0) {
+            ctx.scale(-1, 1); // Voltear horizontalmente
+        }
+        
+        const aspect = img.naturalWidth / img.naturalHeight;
+        let drawW = size * 2;
+        let drawH = size * 2;
+        
+        if (aspect > 1) {
+            drawH = drawW / aspect;
+        } else {
+            drawW = drawH * aspect;
+        }
+        
+        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        
+        let shakeX = (Math.random() - 0.5) * screenShake;
+        let shakeY = (Math.random() - 0.5) * screenShake;
+        ctx.translate((canvas.width / 2 - camera.x) + shakeX, (canvas.height / 2 - camera.y) + shakeY);
+
+        // Suelo Infinito
+        ctx.strokeStyle = '#22222a';
+        ctx.lineWidth = 2;
+        let gridSize = 100;
+        let startX = Math.floor((camera.x - canvas.width/2) / gridSize) * gridSize;
+        let startY = Math.floor((camera.y - canvas.height/2) / gridSize) * gridSize;
+        ctx.beginPath();
+        for (let x = startX - gridSize; x < camera.x + canvas.width/2 + gridSize; x += gridSize) {
+            ctx.moveTo(x, camera.y - canvas.height/2 - 100); ctx.lineTo(x, camera.y + canvas.height/2 + 100);
+        }
+        for (let y = startY - gridSize; y < camera.y + canvas.height/2 + gridSize; y += gridSize) {
+            ctx.moveTo(camera.x - canvas.width/2 - 100, y); ctx.lineTo(camera.x + canvas.width/2 + 100, y);
+        }
+        ctx.stroke();
+
+        // -------------------------
+        // DIBUJAR NEXO (MAGO)
+        // -------------------------
+        if (images.nexus.isLoaded && images.nexus.naturalWidth > 0) {
+            ctx.drawImage(images.nexus, nexus.x - nexus.size/2, nexus.y - nexus.size/2, nexus.size, nexus.size);
+        } else {
+            ctx.fillStyle = nexus.color;
+            ctx.fillRect(nexus.x - nexus.size/2, nexus.y - nexus.size/2, nexus.size, nexus.size);
+            ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold 18px monospace';
+            ctx.fillText("NEXO", nexus.x, nexus.y - 10);
+        }
+        
+        // Barra de progreso del Nexo
+        let progress = nexus.mana / nexus.nextCost;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(nexus.x - nexus.size/2, nexus.y + nexus.size/2 + 10, nexus.size, 10);
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(nexus.x - nexus.size/2, nexus.y + nexus.size/2 + 10, nexus.size * progress, 10);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '12px monospace';
+        ctx.fillText(Math.floor(nexus.mana) + "/" + nexus.nextCost, nexus.x, nexus.y + nexus.size/2 + 35);
+
+        // -------------------------
+        // DIBUJAR LOOT
+        // -------------------------
+        loots.forEach(l => {
+            ctx.fillStyle = l.color;
+            ctx.globalAlpha = l.life < 1.0 ? l.life : 1.0;
             ctx.save();
-            if (shakeAmount > 0) {
-                const sx = (Math.random() - 0.5) * shakeAmount;
-                const sy = (Math.random() - 0.5) * shakeAmount;
-                ctx.translate(sx, sy);
+            ctx.translate(l.x, l.y);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-l.size/2, -l.size/2, l.size, l.size);
+            ctx.restore();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // -------------------------
+        // DIBUJAR ENEMIGOS
+        // -------------------------
+        enemies.forEach(e => {
+            if (images.enemy.isLoaded && images.enemy.naturalWidth > 0) {
+                drawSprite(images.enemy, e.x, e.y, e.radius * 4, e.facing);
+            } else {
+                ctx.fillStyle = e.color;
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI*2); ctx.fill();
             }
+        });
 
-            // Fondo (Mapa)
-            ctx.drawImage(SPRITES.map, 0, 0, WIDTH, HEIGHT);
-
-            ctx.strokeStyle = globalState === 'charging' ? 'rgba(241, 196, 15, 0.4)' : (globalState === 'dash' ? 'rgba(255, 71, 87, 0.4)' : 'rgba(34, 34, 34, 0.3)');
-            ctx.lineWidth = globalState !== 'chase' ? 4 : 2;
-            
+        // Trazado del combo en el suelo (Círculo de drenaje)
+        if (player.combo > 0 && player.hp > 0) {
+            ctx.strokeStyle = player.comboTimer < 1.0 ? '#e74c3c' : '#f1c40f';
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            for(let i=0; i<=WIDTH; i+=120) {
-                ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT);
-            }
-            for(let i=0; i<=HEIGHT; i+=120) {
-                ctx.moveTo(0, i); ctx.lineTo(WIDTH, i);
-            }
+            ctx.arc(player.x, player.y, player.radius + 15, -Math.PI/2, (-Math.PI/2) + (Math.PI * 2 * (player.comboTimer / CFG.COMBO_TIME)));
             ctx.stroke();
+        }
 
-            ctx.fillStyle = '#444';
-            for(let door of DOORS) {
-                ctx.fillRect(
-                    door.x === WIDTH ? WIDTH - door.width : door.x - (door.x===WIDTH/2 ? door.width/2 : 0), 
-                    door.y === HEIGHT ? HEIGHT - door.height : door.y - (door.y===HEIGHT/2 ? door.height/2 : 0), 
-                    door.width, door.height
-                );
-            }
+        // -------------------------
+        // DIBUJAR JUGADOR (CABALLERO)
+        // -------------------------
+        if (player.invulnTimer > 0 && Math.floor(player.invulnTimer * 20) % 2 === 0) {
+            ctx.globalAlpha = 0.3; // Parpadeo de daño
+        }
+        
+        if (images.player.isLoaded && images.player.naturalWidth > 0) {
+            drawSprite(images.player, player.x, player.y, player.radius * 3, player.renderFacing);
+        } else {
+            ctx.fillStyle = player.color;
+            ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
 
-            for (let e of enemies) e.draw();
-            for (let p of particles) p.draw();
-            player.draw();
-            
+        // Flecha indicadora al Nexo
+        let nDx = nexus.x - player.x;
+        let nDy = nexus.y - player.y;
+        let nDist = Math.sqrt(nDx*nDx + nDy*nDy);
+        if (nDist > 150) { 
+            let angle = Math.atan2(nDy, nDx);
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(angle);
+            ctx.fillStyle = 'rgba(155, 89, 182, 0.8)'; 
+            ctx.beginPath();
+            ctx.moveTo(60, 0); ctx.lineTo(45, -8); ctx.lineTo(45, 8); ctx.closePath();
+            ctx.fill();
             ctx.restore();
         }
-
-        function finalizarJuego() {
-            isGameOver = true;
-            UI.gameOver.style.display = 'flex';
-            UI.finalStats.innerHTML = `Sobreviviste ${tiempoSobrevivido.toFixed(1)}s<br>Colisiones provocadas: ${colisiones}<br>Puntos Totales: ${puntaje}`;
+        
+        // Puntero de apuntado
+        let dx = mouseX - (canvas.width / 2); let dy = mouseY - (canvas.height / 2);
+        let length = Math.sqrt(dx*dx + dy*dy);
+        if (length > 0 && player.hp > 0) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(player.x, player.y);
+            ctx.lineTo(player.x + (dx/length) * 40, player.y + (dy/length) * 40); ctx.stroke();
         }
 
-        iniciarJuego();
-    </script>
+        // Animación Slash (Cónica Dinámica / Circular)
+        if (player.slashVisualTimer > 0) {
+            let baseAngle = Math.atan2(player.facingY, player.facingX);
+            let totalVisualTime = player.isSuperSlash ? 0.3 : 0.15;
+            let slashAlpha = player.slashVisualTimer / totalVisualTime;
+            
+            if (player.isSuperSlash) {
+                ctx.fillStyle = `rgba(46, 204, 113, ${slashAlpha})`; 
+            } else {
+                ctx.fillStyle = player.combo >= 20 ? `rgba(241, 196, 15, ${slashAlpha})` : `rgba(255, 255, 255, ${slashAlpha})`;
+            }
+
+            ctx.beginPath(); 
+            ctx.moveTo(player.x, player.y);
+            if (player.isSuperSlash) {
+                ctx.arc(player.x, player.y, player.lastSlashRadius, 0, Math.PI*2);
+            } else {
+                ctx.arc(player.x, player.y, player.lastSlashRadius, baseAngle - player.lastSlashAngle/2, baseAngle + player.lastSlashAngle/2);
+            }
+            ctx.closePath(); 
+            ctx.fill();
+            
+            // Borde del tajo
+            ctx.strokeStyle = player.isSuperSlash ? `rgba(255, 255, 255, ${slashAlpha})` : `rgba(255, 255, 255, ${slashAlpha*0.5})`;
+            ctx.lineWidth = player.isSuperSlash ? 4 : 2;
+            ctx.stroke();
+        }
+
+        // Indicador de Carga (Aura)
+        if (player.isCharging) {
+            let chargeRatio = Math.min(1.0, player.chargeLevel / CFG.CHARGE_TIME);
+            ctx.strokeStyle = chargeRatio >= 1.0 ? '#2ecc71' : '#f1c40f';
+            ctx.lineWidth = 2 + chargeRatio * 4;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius + 10 + Math.sin(Date.now()*0.01)*5, 0, Math.PI*2);
+            ctx.stroke();
+        }
+
+        // Textos Flotantes
+        floatingTexts.forEach(ft => {
+            ctx.fillStyle = ft.color;
+            ctx.globalAlpha = ft.life < 1.0 ? ft.life : 1.0;
+            ctx.font = 'bold 20px monospace';
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.globalAlpha = 1.0;
+        });
+
+        ctx.restore();
+
+        // Tutorial en Pantalla
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.font = '18px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText("Click para atacar | Mantén click para ataque cargado", canvas.width/2, canvas.height - 110);
+
+        if (player.hp <= 0) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'center'; ctx.font = 'bold 48px monospace';
+            ctx.fillText("HAS MUERTO", canvas.width/2, canvas.height/2);
+        }
+    }
+
+    function loop(timestamp) {
+        let dt = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
+        if (dt > 0.1) dt = 0.1; 
+
+        if (hitstopTimer > 0) hitstopTimer -= dt;
+        else update(dt);
+        
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+</script>
 </body>
 </html>

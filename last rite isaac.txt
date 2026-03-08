@@ -1,0 +1,132 @@
+ Ahora tienes tres formas principales de volverte Virtuoso:
+
+
+   1. Exorcismo Puro (Matar en zonas sagradas): Si matas a un enemigo mientras está dentro del área de tu habilidad Consagrar (Q), obtienes un bono directo de Virtud y verás el texto ✧ PURA ✧. Esto te obliga a atraer a los enemigos a tus zonas de luz para "purificarlos".
+   2. Cosecha de Almas Directa: Cada alma que absorbes manualmente manteniendo el Click Derecho te otorga un pequeño incremento de Virtud. Ya no se absorben solas al pasar cerca; ahora el acto de "reclamar" el alma es un acto de devoción.
+   3. Uso de Consagrar: El simple hecho de activar tu habilidad Q te otorga un impulso de Virtud inmediato.
+
+
+  Beneficios de ser Virtuoso:
+  A diferencia del Pecado (que es solo daño y velocidad), ser Virtuoso ahora escala tu poder defensivo y de utilidad:
+   * Reducción de Cooldown: Cuanta más Virtud tengas, más rápido se recarga tu Q (hasta un 50% más rápido).
+   * Mayor Alcance Sagrado: El radio de tus zonas benditas aumenta según tu nivel de Virtud.
+   * Reliquias Exclusivas: Solo si eres Virtuoso podrás ver reliquias como "Santuario Interior" (mejora tu zona sagrada) o "Absolución" (limpieza de área).
+
+
+  ¿Te gustaría que añada alguna otra mecánica de "pureza", como por ejemplo que esquivar proyectiles por poco (near-miss) también te dé Virtud?
+
+
+cambio 2 actual
+
+  1. Fix Definitivo del Click Derecho
+   * He aplicado una anulación de eventos de "triple capa" (Mousedown, Mouseup y ContextMenu) con captura de prioridad. Ya no se abrirá el menú del navegador, el click derecho ahora es exclusivamente para absorber almas.
+
+
+  2. Sistema de Alineación "Blanco o Negro"
+  He eliminado todas las lógicas de "drift" automático y combos complejos. Ahora es así de simple:
+   * Matas a un enemigo normal: +2 de Pecado. (Si solo disparas, te vuelves pecador).
+   * Matas a un enemigo dentro de tu zona Q: +8 de Virtud. (Si purificas, te vuelves virtuoso).
+
+
+  3. Las Almas son solo Almas
+  He quitado la contradicción de las almas:
+   * Recolección: Solo se absorben manteniendo Click Derecho.
+   * Efecto: Solo dan XP (Nivel). No afectan a tu alineación. Así puedes ser un Sinner total y recolectar almas sin miedo a volverte virtuoso por error.
+
+
+  4. Stats de Alineación Claros
+   * Pecador (Sin > 20):
+       * +60% Daño.
+       * +30 Velocidad.
+       * -30% Vida Máxima.
+   * Virtuoso (Virtue > 20):
+       * -35% Daño Recibido (Defensa).
+       * Cooldown de Q mucho más rápido.
+       * Radio de Q mucho más grande.
+
+
+  Ahora el juego debería sentirse mucho más directo: ¿Quieres daño? Mata rápido. ¿Quieres sobrevivir? Usa tu zona sagrada para purificar.
+
+
+El sistema de Pecado y Virtud es el núcleo de tu estilo de juego. Dependiendo de cómo decidas exorcizar a los enemigos, tu personaje se convierte en un "Cañón de Cristal" (Pecador) o en un "Tanque de Utilidad" (Virtuoso).
+
+
+  Aquí tienes el desglose de las estadísticas reales que he programado:
+
+  ---
+
+  1. El Camino del PECADOR (Estilo Agresivo)
+  Te vuelves pecador simplemente matando rápido. Si disparas y aniquilas enemigos de forma estándar, tu medidor sube hacia el rojo.
+
+
+   * Bonos de Daño: Hasta un +60% de daño extra en todos tus disparos.
+   * Bonos de Velocidad: Te mueves hasta +30 puntos más rápido (te vuelves muy ágil para esquivar).
+   * El Gran Castigo: Tu vida máxima se reduce hasta un -30%. Eres extremadamente poderoso, pero un par de golpes mal recibidos te matarán.
+   * Útil para: Jugadores con reflejos rápidos que prefieren terminar las oleadas lo antes posible.
+
+
+  2. El Camino del VIRTUOSO (Estilo Táctico/Defensivo)
+  Te vuelves virtuoso si realizas "Exorcismos Puros". Esto significa atraer a los enemigos a tus Zonas Sagradas (Q) y matarlos mientras están dentro de la luz.
+
+
+   * Bonos de Defensa: Recibes hasta un 35% menos de daño de los enemigos.
+   * Habilidades Divinas (Q): Tu zona sagrada se recarga un 50% más rápido y su radio de efecto es un 50% más grande.
+   * Curación: Si tienes la reliquia de "Comunión", te curas mucho más siendo virtuoso.
+   * Útil para: Sobrevivir en oleadas avanzadas donde hay demasiados proyectiles y enemigos en pantalla.
+
+  ---
+
+  Resumen de Estadísticas (Efecto Máximo)
+
+
+
+  ┌────────────────┬─────────────────────┬────────────────────────────┐
+  │ Característica │ Pecador (Máximo)    │ Virtuoso (Máximo)          │
+  ├────────────────┼─────────────────────┼────────────────────────────┤
+  │ Daño           │ +60%                │ Normal                     │
+  │ Velocidad      │ +30 (Muy rápido)    │ Normal                     │
+  │ Defensa        │ Normal              │ -35% Daño recibido         │
+  │ Vida Máxima    │ -30% (Penalización) │ Normal (Vida completa)     │
+  │ Habilidad (Q)  │ Normal              │ Cooldown -50% / Radio +50% │
+  └────────────────┴─────────────────────┴────────────────────────────┘
+
+  ---
+
+
+  ¿De qué sirve además de los números? (Reliquias)
+  Tu alineación decide qué objetos te ofrece el juego al subir de nivel:
+
+
+   1. Reliquias de Pecado: Si eres pecador, verás cosas como el "Libro Prohibido" (invoca demonios) o "Ira Divina" (ondas de choque al matar).
+   2. Reliquias de Virtud: Si eres virtuoso, verás el "Santuario Interior" (tu zona Q es gigantesca y dura más) o "Absolución" (purifica toda la pantalla).
+
+
+  En resumen: El Pecado sirve para matar antes de que te toquen. La Virtud sirve para que, cuando te toquen, no te duela, y para controlar el mapa con tus zonas sagradas.
+
+
+  Fix UI: "EXORCIZADOS" y "CORRUPCIÓN" solapados
+Ambos elementos ahora están dentro de un contenedor único #top-right-wrap con flex-direction: column y gap: 10px. El escalado transform: scale(var(--ui)) se aplica solo al contenedor padre, por lo que los dos bloques se desplazan juntos sin pisarse nunca, independientemente de la resolución.
+
+¿Qué hace la Corrupción actualmente?
+Casi nada mecánicamente. Sus efectos reales son:
+
+Efecto	Impacto
+Enemigos con más HP (×1 + corruption×0.005)	Solo en spawn
+Enemigos ligeramente más rápidos por wave	wave × 1.035 no corrupción directa
+Cambia el color de la grilla y los símbolos del suelo	Visual únicamente
+El label de corrupción cambia a rojo intenso	Visual únicamente
+Conclusión: es un contador cosmético. No castiga al jugador ni cambia el flujo de juego.
+
+Ideas para darle vida a la Corrupción y al mapa
+Corrupción con mecánica real:
+
+Zonas corrompidas en el mapa — charcos de energía oscura que aparecen al azar y dañan al jugador si los pisa (se limpian con Consagrar Q)
+A >50% corrupción aparecen variantes "corrompidas" de enemigos: más rápidas, con aura que daña en rango corto
+Las zonas consagradas duran menos según la corrupción (el mundo resiste la purificación)
+A 100% el mapa se cierra: un borde de energía oscura que se contrae lentamente
+Mejoras al mapa:
+
+Pilares / obstáculos con colisión real para proyectiles y enemigos — dan táctica a los ángulos de disparo
+Límite del mundo visible — actualmente el mapa es infinito sin señal, un borde con vignette haría que el jugador sepa dónde está
+Zonas sagradas predefinidas — círculos fijos en el mapa que amplifican el efecto de Consagrar si el jugador se posiciona en ellas
+¿Implemento alguna de estas ideas? Por ejemplo puedo agregar pilares con colisión o las zonas corrompidas dañinas generadas por la corrupción.

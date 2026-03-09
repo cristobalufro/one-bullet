@@ -1,0 +1,55 @@
+Cookie Clicker's depth comes from three interlocking systems: exponential scaling, combinatorial upgrades, and meta-progression. Here's how to apply each to Frog Frenzy specifically:
+
+🍪 Cookie Clicker's Core Depth Pillars → Frog Frenzy
+1. Upgrades that multiply OTHER upgrades (not just add)
+Cookie Clicker's genius is that buying 10 grandmas unlocks an upgrade that doubles ALL grandmas. In Frog Frenzy:
+
+Frogs comprados = 10 → desbloquea "Banquete real" → todas las ranas comen 2 insectos al mismo tiempo
+Frogs comprados = 25 → desbloquea "Sincronía" → todas las ranas disparan a la vez cada 5s (mega-burst)
+Total capturas = 1000 → desbloquea "Piel resbaladiza" → los mosquitos ya no fallan al ser clicados
+
+These milestone unlocks create the feeling of "I need to get to X to unlock Y" — the core Cookie Clicker hook.
+
+2. Prestige / Ascensión — The main retention loop
+Cookie Clicker's prestige gives permanent multipliers. For Frog Frenzy:
+
+Al llegar a 50,000 capturas totales → puedes "Hibernar"
+→ Pierdes todo EXCEPTO: frogs permanecen como "fantasmas", dan 10% de su valor pasivo
+→ Ganas 1 "Lirio Dorado" (moneda especial)
+→ Lirios dorados desbloquean mejoras permanentes entre runs
+
+Lirios Dorados podrían comprar:
+
+Iniciar con 5 ranas básicas
+Multiplicador global permanente +10%
+Nuevas mecánicas (lluvia aleatoria de monedas, nuevos tipos de insecto)
+3. Logros que dan bonificación (Cookie Clicker: 1 achievement = +2% CPS)
+const ACHIEVEMENTS = [
+  { id: 'first_catch',   label: '🐛 Primera captura',    req: catches => catches >= 1,    bonus: 'coinMult +0.05' },
+  { id: 'hundred',       label: '💯 Centenar',            req: catches => catches >= 100,  bonus: 'coinMult +0.05' },
+  { id: 'ten_frogs',     label: '🐸 Ejército pequeño',    req: frogs => frogs >= 10,       bonus: 'speedMult +0.1' },
+  { id: 'first_boss',    label: '💀 Cazador de jefes',    req: bossKills => bossKills >= 1, bonus: 'raidReward x1.5' },
+];
+
+Cada logro siempre está desbloqueando algo — el jugador siente progreso constante.
+
+4. Economía de dos monedas (Cookie Clicker: Cookies + Prestige currency)
+Moneda	Obtención	Uso
+🪙 Monedas normales	Capturar insectos	Ranas, mejoras estándar
+🌸 Polen dorado	Matar Boss, eventos especiales	Mejoras únicas, cosméticos, desbloqueos permanentes
+El Polen dorado es raro y precioso — crea decisiones de gasto significativas.
+
+5. Edificios con sinergia (Cookie Clicker: "Por cada X edificios, Y hace +Z%")
+Por cada 5 ranas básicas → todas las ranas gordas ganan +15% splash range
+Por cada rana francotiradora → el valor de fireflies +10%
+
+Esto hace que la composición del ejército importe y que haya múltiples builds válidas.
+
+📋 Hoja de ruta sugerida (en orden de impacto)
+1. Sistema de logros con bonificaciones  ← bajo costo, alto impacto
+2. Milestone unlocks (desbloqueos por capturas)  ← cambia el pacing
+3. Segunda moneda (Polen dorado)  ← media complejidad
+4. Prestige/Hibernación  ← alta complejidad, máxima retención
+5. Sinergias entre ranas  ← requiere 2+ tipos nuevos de rana
+
+¿Quieres que implemente alguno de estos? El sistema de logros + milestone unlocks sería el más impactante para implementar primero con el menor riesgo de romper el balance actual.
